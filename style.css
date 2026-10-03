@@ -19,35 +19,6 @@ html, body {
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 28px 6px;
-}
-.brand { font-size: 20px; font-weight: 700; letter-spacing: .3px; }
-.brand::first-letter { color: var(--accent); }
-#clock { color: var(--muted); font-variant-numeric: tabular-nums; }
-
-.toolbar {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 8px 28px 14px;
-  flex-wrap: wrap;
-}
-#search {
-  flex: 1;
-  min-width: 200px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 9px 16px;
-  outline: none;
-}
-#search:focus { border-color: var(--accent); }
-
 button {
   background: var(--panel-2);
   color: var(--text);
@@ -93,7 +64,7 @@ main { padding: 0 28px 90px; }
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(var(--cols, 6), 1fr);
+  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
   gap: 14px;
 }
 .tiles.no-paginate { grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); }
@@ -290,6 +261,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   padding: 6px;
   box-shadow: 0 12px 32px rgba(0,0,0,.45);
 }
+.menu[hidden] { display: none; }
 .menu button {
   text-align: left;
   background: none;
