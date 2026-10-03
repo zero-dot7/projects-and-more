@@ -304,6 +304,22 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 }
 #btn-settings:hover { opacity: 1; }
 
+#btn-new-group { /* pkt 30: stały przycisk nowej grupy, prawy górny róg */
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  padding: 0;
+  z-index: 50;
+  opacity: .55;
+  background: var(--panel);
+}
+#btn-new-group:hover { opacity: 1; }
+
 .menu {
   position: fixed;
   left: 18px;
@@ -338,7 +354,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 .tab-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* pkt 31: zawsze jedna linia (było wrap → różnie wg IMG11/IMG12) */
   gap: 6px;
   padding: 0;
   margin-bottom: 12px;

@@ -861,6 +861,7 @@ async function init() {
   syncTopSitesMenu();
 
   // settings menu (gear, bottom-left)
+  $('#btn-new-group').onclick = () => openGroupDialog(null); // pkt 30: stały + w prawym górnym rogu
   const menu = $('#settings-menu');
   $('#btn-settings').onclick = (e) => {
     e.stopPropagation();
