@@ -187,7 +187,8 @@ main { padding: 0 28px 90px; }
   position: absolute;
   left: 0; right: 0; top: -20px; /* pkt 29: host nad kafelkiem (był pod: bottom: -20px) */
   font-size: 11px;
-  text-align: center;
+  text-align: left; /* korekta: wyrównanie do lewej (było center) */
+  padding-left: 7px; /* pkt 29: w linii z padded contentem kafelka */
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
