@@ -13,7 +13,7 @@
 <div id="settings-menu" class="menu" hidden>
   <button data-act="import">⬆ Importuj backup…</button>
   <button data-act="export">⬇ Eksportuj JSON</button>
-  <button data-act="view" id="view-label">Zakładki grup</button>
+  <button data-act="view" id="view-label" data-i18n="label.viewTabs">Zakładki grup</button>
   <button data-act="layout">▦ Układ kafelków…</button>
   <button data-act="theme" id="theme-label">☀ Tryb dzienny</button>
   <button data-act="topsites" id="topsites-label">★ Najczęściej odwiedzane: wł.</button>
@@ -24,24 +24,25 @@
 <input type="file" id="file-import" accept="application/json" hidden>
 <main id="board"></main>
 <div id="toast" class="toast" hidden></div>
-<footer><span id="stats"></span></footer>
+<footer><span id="stats"></span> <span id="thumb-stats"></span></footer>
+<!-- pkt 36: licznik miniatur -->
 
 <dialog id="dlg">
   <form id="dlg-form" method="dialog">
     <h3 id="dlg-title">Dodaj kafelek</h3>
-    <label>Tytuł<br><input name="title" id="f-title" required></label>
+    <label><span data-i18n="lbl.title">Tytuł</span><br><input name="title" id="f-title" required></label>
     <label>URL<br><input name="url" id="f-url" type="url" placeholder="https://…" required></label>
     <label id="dlg-group-row">Grupa<br><select name="group" id="f-group"></select></label>
     <div class="dlg-actions">
-      <button type="button" id="dlg-cancel">Anuluj</button>
-      <button type="submit" class="primary" id="dlg-ok">Zapisz</button>
+      <button type="button" id="dlg-cancel" data-i18n="btn.cancel">Anuluj</button>
+      <button type="submit" class="primary" id="dlg-ok" data-i18n="btn.save">Zapisz</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="dlg-group">
   <form id="dlg-group-form" method="dialog">
-    <h3 id="dlg-group-title">Nowa grupa</h3>
+    <h3 id="dlg-group-title" data-i18n="dlg.newGroup">Nowa grupa</h3>
     <label>Nazwa<br><input name="name" id="f-group-name" required></label>
     <label>Kolor
       <div class="colors" id="color-picker">
@@ -55,42 +56,53 @@
         <button type="button" class="swatch" data-c="#12a594" style="--c:#12a594"></button>
         <button type="button" class="swatch" data-c="#e93a82" style="--c:#e93a82"></button>
         <button type="button" class="swatch" data-c="#3e63dd" style="--c:#3e63dd"></button>
+        <!-- pkt 34: paleta rozbudowana 10 -> 20 kolorów -->
+        <button type="button" class="swatch" data-c="#2f9e44" style="--c:#2f9e44"></button>
+        <button type="button" class="swatch" data-c="#66a80f" style="--c:#66a80f"></button>
+        <button type="button" class="swatch" data-c="#f08c00" style="--c:#f08c00"></button>
+        <button type="button" class="swatch" data-c="#e03131" style="--c:#e03131"></button>
+        <button type="button" class="swatch" data-c="#9c36b5" style="--c:#9c36b5"></button>
+        <button type="button" class="swatch" data-c="#6741d9" style="--c:#6741d9"></button>
+        <button type="button" class="swatch" data-c="#0c8599" style="--c:#0c8599"></button>
+        <button type="button" class="swatch" data-c="#f783ac" style="--c:#f783ac"></button>
+        <button type="button" class="swatch" data-c="#845ef7" style="--c:#845ef7"></button>
+        <button type="button" class="swatch" data-c="#c2255c" style="--c:#c2255c"></button>
       </div>
     </label>
     <div class="dlg-actions">
-      <button type="button" id="dlg-group-cancel">Anuluj</button>
-      <button type="submit" class="primary" id="dlg-group-ok">Zapisz</button>
+      <button type="button" id="dlg-group-cancel" data-i18n="btn.cancel">Anuluj</button>
+      <button type="submit" class="primary" id="dlg-group-ok" data-i18n="btn.save">Zapisz</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="dlg-layout">
   <form method="dialog">
-    <h3>▦ Układ kafelków</h3>
+    <h3 data-i18n="dlg.layout">▦ Układ kafelków</h3>
     <label>Liczba kolumn<br><input type="number" id="f-cols" min="1" max="12" step="1" value="6"></label>
-    <label>Liczba rzędów<br><input type="number" id="f-rows" min="1" max="12" step="1" value="4"></label>
-    <label class="chk"><input type="checkbox" id="f-paginate" checked> Podziel na strony, gdy kafelków > cols × rzędy</label>
+    <label><span data-i18n="lbl.rowsLong">Liczba rzędów</span><br><input type="number" id="f-rows" min="1" max="12" step="1" value="4"></label>
+    <label class="chk"><input type="checkbox" id="f-paginate" checked> <span data-i18n="hint.paginate">Podziel na strony, gdy kafelków > cols × rzędy</span></label>
     <div class="dlg-actions">
-      <button type="button" id="dlg-layout-cancel">Anuluj</button>
-      <button type="button" class="primary" id="dlg-layout-ok">Zapisz</button>
+      <button type="button" id="dlg-layout-cancel" data-i18n="btn.cancel">Anuluj</button>
+      <button type="button" class="primary" id="dlg-layout-ok" data-i18n="btn.save">Zapisz</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="dlg-backup">
   <form method="dialog">
-    <h3>☁ Backup Dropbox</h3>
+    <h3 data-i18n="dlg.backup">☁ Backup Dropbox</h3>
     <p class="hint">Backup zapisuje grupy i kafelki do pliku <code>speed-dial-backup.json</code> w folderze aplikacji Dropbox.</p>
-    <label>Token dostępowy (OAuth2 Dropbox)<br>
+    <label><span data-i18n="lbl.dbxTokenLong">Token dostępowy (OAuth2 Dropbox)</span><br>
       <input name="token" id="f-dbx-token" type="password" placeholder="sl.…" autocomplete="off">
     </label>
-    <label class="chk"><input type="checkbox" id="f-dbx-auto" checked> Auto-backup przy każdej zmianie (max 1/5 min)</label>
+    <label class="chk"><input type="checkbox" id="f-dbx-auto" checked> <span data-i18n="hint.dbxAuto">Auto-backup przy każdej zmianie (max 1/5 min)</span></label>
     <div id="dbx-status" class="hint"></div>
     <div class="dlg-actions">
-      <button type="button" id="btn-dbx-restore">Wczytaj z Dropbox</button>
+      <button type="button" id="btn-dbx-restore" data-i18n="btn.dbxRestore">Wczytaj z Dropbox</button>
       <span class="spacer"></span>
-      <button type="button" id="dlg-backup-cancel">Anuluj</button>
-      <button type="button" class="primary" id="dlg-backup-ok">Zapisz ustawienia</button>
+      <button type="button" id="dlg-backup-cancel" data-i18n="btn.cancel">Anuluj</button>
+      <button type="button" class="primary" id="dlg-backup-ok" data-i18n="btn.dbxSave">Zapisz ustawienia</button>
     </div>
   </form>
 </dialog>
