@@ -248,7 +248,8 @@ async function main() {
 
   // pkt 13: active tab is green (default --tab-active)
   const activeBg = await evalJs(`getComputedStyle(document.querySelector('.tab.active')).backgroundColor`);
-  check('tabs: active tab green (0.2.2)', /69db7c|105, 219, 124/i.test(activeBg));
+  const gcol = await evalJs(`(() => { const el = document.querySelector('.tab.active'); if (!el) return 'NO ACTIVE'; const v = getComputedStyle(el).getPropertyValue('--gcolor').trim(); const bg = getComputedStyle(el).backgroundColor; return (v || 'NO GCOLOR') + '|' + bg; })()`);
+  check('pkt28: aktywna zakładka w kolorze grupy', /#46a758|70, 167, 88/i.test(gcol), `(${gcol})`);
 
   // pkt 14: day/night theme toggle
   await evalJs(`document.querySelector('[data-act="theme"]').click();`);
@@ -346,7 +347,7 @@ async function main() {
   check('pkt18: thumb aspect-ratio landscape', await evalJs(`(() => { const v = getComputedStyle(document.querySelector('.tile .thumb')).aspectRatio; const [w,h] = v.split('/').map(Number); return w/h; })()`) === 1.6);
   check('pkt18: tile-cap present with favicon img', await evalJs(`!!document.querySelector('.tile .tile-cap .cap-fav')`));
   check('pkt18: tile is wide (aspect < 1 vertical)', await evalJs(`(() => { const t = document.querySelector('.tile'); const r = t.getBoundingClientRect(); return r.width > r.height; })()`));
-  check('pkt18: t-host below tile', await evalJs(`(() => { const t = document.querySelector('.tile').getBoundingClientRect(); const h = document.querySelector('.tile .t-host').getBoundingClientRect(); return h.top >= t.bottom - 2; })()`));
+  check('pkt29: t-host above tile', await evalJs(`(() => { const t = document.querySelector('.tile').getBoundingClientRect(); const h = document.querySelector('.tile .t-host').getBoundingClientRect(); return h.bottom <= t.top + 2; })()`));
 
   // 19: w trybie zakładek nagłówek grupy ukryty, pasek zakładek zostaje
   await evalJs(`(() => { state.view.mode = 'tabs'; state.view.activeId = state.groups[0].id; render(); })()`);

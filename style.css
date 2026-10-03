@@ -142,7 +142,7 @@ main { padding: 0 28px 90px; }
 /* pkt 18: kafelek landscape (IMG2/IMG8) — duży zrzut strony + pasek favicon/tytuł na dole */
 .shot {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse; /* pkt 29: pasek tytułu nad zrzutem (był pod) */
   overflow: hidden;
   border-radius: calc(var(--radius) - 2px);
   background: var(--panel-2);
@@ -185,7 +185,7 @@ main { padding: 0 28px 90px; }
 }
 .t-host {
   position: absolute;
-  left: 0; right: 0; bottom: -20px;
+  left: 0; right: 0; top: -20px; /* pkt 29: host nad kafelkiem (był pod: bottom: -20px) */
   font-size: 11px;
   text-align: center;
   color: var(--muted);
@@ -194,7 +194,7 @@ main { padding: 0 28px 90px; }
   white-space: nowrap;
   pointer-events: none;
 }
-.tiles { position: relative; }
+.tiles { position: relative; padding-top: 22px; /* pkt 29: miejsce na .t-host nad pierwszym rzędem */ }
 .tile-actions {
   position: absolute;
   top: 4px; right: 4px;
@@ -365,11 +365,11 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 }
 .tab:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
 .tab.active {
-  background: var(--tab-active, #69db7c);
+  background: var(--gcolor, var(--tab-active, #69db7c)); /* pkt 28: aktywna zakładka w kolorze grupy */
   color: #1b1f24;
   border-color: transparent;
 }
-.tab.active:hover { background: var(--tab-active, #69db7c); filter: brightness(1.08); }
+.tab.active:hover { background: var(--gcolor, var(--tab-active, #69db7c)); filter: brightness(1.08); }
 .tab .dot {
   flex: none;
   width: 8px; height: 8px;
