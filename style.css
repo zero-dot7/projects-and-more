@@ -48,6 +48,13 @@ button.primary:hover { filter: brightness(1.1); }
 main { padding: 0 28px 90px; }
 
 .group { margin-bottom: 22px; }
+/* pkt 19: w trybie zakładek bez nagłówka grupy — tylko przyciski akcji z prawej */
+.group.no-head .group-head { margin-bottom: 4px; }
+.group.no-head .group-head .chev,
+.group.no-head .group-head h2,
+.group.no-head .group-head .count,
+.group.no-head .group-head .spacer { display: none; }
+.group.no-head .group-head { justify-content: flex-end; }
 .group-head {
   display: flex;
   align-items: center;
@@ -79,6 +86,7 @@ main { padding: 0 28px 90px; }
   display: grid;
   grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
   gap: 14px;
+  row-gap: 22px; /* pkt 18: miejsce na .t-host pod kafelkiem */
 }
 .tiles.no-paginate { grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); }
 .group:not(.open) .tiles { display: none; }
@@ -112,9 +120,8 @@ main { padding: 0 28px 90px; }
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 8px 10px;
+  align-items: stretch;
+  padding: 6px 6px 0;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -129,44 +136,62 @@ main { padding: 0 28px 90px; }
 }
 .tile.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
-.thumb {
-  width: 48px; height: 48px;
-  border-radius: 10px;
+/* pkt 18: kafelek landscape (IMG2/IMG8) — duży zrzut strony + pasek favicon/tytuł na dole */
+.shot {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 2px);
   background: var(--panel-2);
+}
+.thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10; /* cały kafelek (z paskiem tytułu) ≈ 4:3 landscape jak IMG2/IMG8 */
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
 .fav { width: 28px; height: 28px; }
 .letter { font-size: 22px; font-weight: 700; color: var(--gcolor, var(--accent)); }
 
-/* pkt 5: miniatura zrzutu strony z backupu GSD wypełnia kafelek */
-.tile.has-thumb .thumb {
-  width: 100%;
-  height: var(--th, 96px);
-  border-radius: 8px;
-}
 .tile.has-thumb .fav {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: top;
 }
-.tile.has-thumb { padding-top: 8px; }
+
+.tile-cap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px 6px;
+  min-width: 0;
+}
+.cap-fav {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  flex: none;
+}
+.cap-fav.cap-off { display: none; }
 .t-title {
-  font-size: 12.5px;
-  max-width: 100%;
+  font-size: 12px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .t-host {
+  position: absolute;
+  left: 0; right: 0; bottom: -20px;
   font-size: 11px;
+  text-align: center;
   color: var(--muted);
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
+.tiles { position: relative; }
 .tile-actions {
   position: absolute;
   top: 4px; right: 4px;

@@ -234,6 +234,8 @@ function renderGroup(g) {
   el.dataset.id = g.id;
   el.style.setProperty('--gcolor', g.color);
   el.classList.toggle('open', g.open !== false);
+  // pkt 19: w trybie zakładek bez nagłówka grupy (nazwa jest na zakładce)
+  el.classList.toggle('no-head', state.view.mode === 'tabs');
 
   const h2 = el.querySelector('h2');
   h2.textContent = g.name;
@@ -312,6 +314,12 @@ function renderTile(t, g) {
   }
   img.onload = () => { letter.hidden = true; };
   img.onerror = () => { img.hidden = true; letter.textContent = (t.title[0] || '?').toUpperCase(); };
+
+  // pkt 18: mała favicon w pasku tytułu kafelka (pod zrzutem, jak w IMG2/IMG8)
+  const capFav = a.querySelector('.cap-fav');
+  capFav.src = faviconFor(t.url);
+  capFav.onload = () => { capFav.classList.remove('cap-off'); };
+  capFav.onerror = () => { capFav.classList.add('cap-off'); };
 
   a.querySelector('.edit-tile').onclick = (e) => { e.preventDefault(); e.stopPropagation(); openTileDialog(t, g.id); };
   a.querySelector('.del-tile').onclick = (e) => {
