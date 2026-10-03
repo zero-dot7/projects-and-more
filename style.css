@@ -93,10 +93,36 @@ main { padding: 0 28px 90px; }
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(var(--cols, 6), 1fr);
   gap: 14px;
 }
+.tiles.no-paginate { grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); }
 .group:not(.open) .tiles { display: none; }
+
+/* pagination bar */
+.page-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0 2px;
+}
+.page-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.page-btn:hover { color: var(--text); }
+.page-btn[disabled] { opacity: .4; cursor: default; }
+.page-btn.cur { background: var(--tab-active, #339af0); color: #fff; border-color: transparent; }
 
 .tile {
   position: relative;
@@ -128,6 +154,20 @@ main { padding: 0 28px 90px; }
 }
 .fav { width: 28px; height: 28px; }
 .letter { font-size: 22px; font-weight: 700; color: var(--gcolor, var(--accent)); }
+
+/* pkt 5: miniatura zrzutu strony z backupu GSD wypełnia kafelek */
+.tile.has-thumb .thumb {
+  width: 100%;
+  height: var(--th, 96px);
+  border-radius: 8px;
+}
+.tile.has-thumb .fav {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.tile.has-thumb { padding-top: 8px; }
 .t-title {
   font-size: 12.5px;
   max-width: 100%;
@@ -264,14 +304,15 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   margin: 4px 8px;
 }
 
-/* ---------- group tabs (Brave-style) ---------- */
+/* ---------- group tabs (pill, wg IMG1/IMG2) ---------- */
 
 .tab-bar {
   display: flex;
-  align-items: flex-end;
-  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 0;
-  margin-bottom: -1px;
+  margin-bottom: 12px;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -281,26 +322,25 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 150px;
+  min-width: 120px;
   max-width: 230px;
-  padding: 8px 8px 9px 12px;
+  padding: 7px 14px;
   background: transparent;
   border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 10px 10px 0 0;
+  border-radius: 999px; /* pill */
   color: var(--muted);
   cursor: pointer;
   font: inherit;
   font-size: 13.5px;
+  transition: background .12s, color .12s, border-color .12s;
 }
 .tab:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
 .tab.active {
-  background: var(--panel);
-  color: var(--text);
-  border-color: var(--border);
-  border-top: 3px solid var(--gcolor, var(--accent));
-  padding-top: 6px;
+  background: var(--tab-active, #339af0);
+  color: #fff;
+  border-color: transparent;
 }
+.tab.active:hover { background: var(--tab-active, #339af0); filter: brightness(1.08); }
 .tab .dot {
   flex: none;
   width: 8px; height: 8px;
@@ -320,7 +360,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   border-radius: 8px;
   padding: 1px 6px;
 }
-.tab.active .tab-count { background: var(--bg); }
+.tab.active .tab-count { color: #fff; background: rgba(255,255,255,.2); }
 .tab-close {
   flex: none;
   background: none;
@@ -339,14 +379,34 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 .tab.active .tab-close { color: var(--text); }
 
 .tab-new {
-  padding: 8px 14px;
-  border-radius: 10px 10px 0 0;
-  border-bottom: none;
+  padding: 7px 14px;
+  border-radius: 999px;
   background: transparent;
   color: var(--muted);
   font-size: 16px;
+  cursor: pointer;
+  border: 1px dashed transparent;
 }
 .tab-new:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
+
+/* ---------- toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.35);
+  padding: 10px 18px;
+  font-size: 13.5px;
+  z-index: 999;
+  max-width: min(90vw, 560px);
+}
+.toast[hidden] { display: none; }
 
 body.view-tabs #board { border-top: 1px solid var(--border); padding-top: 16px; }
 body.view-tabs .chev { display: none; } /* w trybie zakładek nie zwijamy grup */

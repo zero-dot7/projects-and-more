@@ -16,7 +16,14 @@ const DEFAULTS = {
   ],
 };
 
-const state = { groups: [], filter: '', view: { mode: 'all', activeId: null } };
+const LAYOUT_DEFAULTS = { cols: 6, rows: 4, paginate: true };
+
+const state = {
+  groups: [],
+  filter: '',
+  view: { mode: 'all', activeId: null, pages: {} },
+  layout: { ...LAYOUT_DEFAULTS },
+};
 const uid = () => Math.random().toString(36).slice(2, 10);
 const $ = (s) => document.querySelector(s);
 
@@ -27,7 +34,7 @@ const tplTile = $('#tpl-tile');
 /* ---------- storage ---------- */
 
 async function load() {
-  const data = await chrome.storage.local.get(['groups', 'viewMode']);
+  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout']);
   state.groups = Array.isArray(data.groups) && data.groups.length
     ? data.groups
     : structuredClone(DEFAULTS.groups);
@@ -36,6 +43,22 @@ async function load() {
   if (state.view.mode === 'tabs' && !state.groups.some(g => g.id === state.view.activeId)) {
     state.view.activeId = state.groups[0]?.id ?? null;
   }
+  if (data.layout && typeof data.layout === 'object') {
+    state.layout = {
+      cols: clampInt(data.layout.cols, 1, 12, LAYOUT_DEFAULTS.cols),
+      rows: clampInt(data.layout.rows, 1, 8, LAYOUT_DEFAULTS.rows),
+      paginate: data.layout.paginate !== false,
+    };
+  }
+}
+
+function clampInt(v, min, max, dflt) {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : dflt;
+}
+
+async function saveLayout() {
+  await chrome.storage.local.set({ layout: state.layout });
 }
 
 async function save() {
@@ -229,11 +252,40 @@ function renderGroup(g) {
   el.querySelector('.del-group').onclick = () => removeGroup(g.id);
 
   const tilesEl = el.querySelector('.tiles');
-  for (const t of g.tiles) tilesEl.appendChild(renderTile(t, g));
+  // pkt 7–8: układ cols × rows z paginacją; kafelki wypełniają szerokość (1fr)
+  const perPage = state.layout.cols * state.layout.rows;
+  const doPaginate = state.layout.paginate && g.tiles.length > perPage;
+  tilesEl.style.setProperty('--cols', state.layout.cols);
+  tilesEl.classList.toggle('no-paginate', !state.layout.paginate);
+  const page = clampInt(state.view.pages[g.id] ?? 0, 0, Math.max(0, Math.ceil(g.tiles.length / perPage) - 1), 0);
+  state.view.pages[g.id] = page;
+  const visible = doPaginate ? g.tiles.slice(page * perPage, (page + 1) * perPage) : g.tiles;
+  for (const t of visible) tilesEl.appendChild(renderTile(t, g));
+  if (doPaginate) tilesEl.appendChild(renderPageBar(g, page, Math.ceil(g.tiles.length / perPage)));
 
   // group header as drag target for moving whole groups? — keep simple: tile drag only
   enableGroupDrop(tilesEl, g);
   return el;
+}
+
+/* ---------- pagination ---------- */
+
+function renderPageBar(g, page, pages) {
+  const bar = document.createElement('div');
+  bar.className = 'page-bar';
+  const mk = (label, target, opts = {}) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (opts.cur ? ' cur' : '');
+    b.textContent = label;
+    if (opts.disabled) b.disabled = true;
+    else b.onclick = () => { state.view.pages[g.id] = target; render(); };
+    bar.appendChild(b);
+  };
+  mk('‹', page - 1, { disabled: page === 0 });
+  const from = Math.max(0, Math.min(page - 1, pages - 3));
+  for (let p = from; p < from + 3 && p < pages; p++) mk(String(p + 1), p, { cur: p === page });
+  mk('›', page + 1, { disabled: page === pages - 1 });
+  return bar;
 }
 
 function renderTile(t, g) {
@@ -247,6 +299,7 @@ function renderTile(t, g) {
   const letter = a.querySelector('.letter');
   if (t.thumb) {
     img.src = t.thumb; // własna miniaturka z backupu GSD
+    a.classList.add('has-thumb'); // pkt 5: pokaż zrzut strony zamiast małej ikonki
   } else {
     img.src = faviconFor(t.url);
   }
@@ -571,7 +624,7 @@ function sanitizeGroups(raw) {
 
 function importJson(file) {
   if (file.size > 50 * 1024 * 1024) { alert('Plik zbyt duży (limit 50 MB).'); return; }
-  file.text().then(txt => {
+  file.text().then(async txt => {
     const data = JSON.parse(txt);
     let groups;
     if (data && typeof data.dataVersion === 'number' && Array.isArray(data.groups)) {
@@ -581,11 +634,50 @@ function importJson(file) {
     } else {
       throw new Error('nieznany format');
     }
-    if (!confirm(`Zaimportować ${groups.length} grup / ${groups.reduce((n, g) => n + g.tiles.length, 0)} kafelków? Obecna zawartość zostanie zastąpiona.`)) return;
+    const tileCount = groups.reduce((n, g) => n + g.tiles.length, 0);
+    const ok = await confirmDlg(
+      'Import backup',
+      `Zaimportować ${groups.length} grup / ${tileCount} kafelków? Obecna zawartość zostanie zastąpiona.`
+    );
+    if (!ok) return;
     state.groups = groups;
     if (modeIsTabs()) state.view.activeId = groups[0]?.id ?? null;
-    save(); render();
+    await save();
+    render();
+    toast(`Zaimportowano ${groups.length} grup / ${tileCount} kafelków — zapisano.`);
   }).catch(err => alert('Błąd importu: ' + err.message));
+}
+
+/* Własny confirm oparty o <dialog> — window.confirm bywa blokowane w MV3 new tab
+   i wtedy po cichu zwraca false, przez co import nie zapisywał stanu. */
+function confirmDlg(title, message) {
+  return new Promise(resolve => {
+    const dlg = $('#dlg-import');
+    $('#dlg-import-title').textContent = title;
+    $('#dlg-import-summary').textContent = message;
+    const done = (v) => { dlg.close(); cleanup(); resolve(v); };
+    const onBtn = (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      done(b.value === 'ok');
+    };
+    const onCancel = () => { cleanup(); resolve(false); };
+    const cleanup = () => {
+      dlg.removeEventListener('click', onBtn);
+      dlg.removeEventListener('cancel', onCancel);
+    };
+    dlg.addEventListener('click', onBtn);
+    dlg.addEventListener('cancel', onCancel);
+    dlg.showModal();
+  });
+}
+
+function toast(msg, ms = 4000) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.hidden = true; }, ms);
 }
 
 /* ---------- clock & search ---------- */
@@ -634,6 +726,33 @@ async function init() {
     if (act === 'export') exportJson();
     if (act === 'backup') openBackupDialog();
     if (act === 'view') toggleViewMode();
+    if (act === 'layout') {
+      fCols.value = state.layout.cols;
+      fRows.value = state.layout.rows;
+      fPag.checked = state.layout.paginate;
+      dlgLayout.showModal();
+    }
+  };
+
+  // dialog układu kafelków (pkt 7–8)
+  const dlgLayout = $('#dlg-layout');
+  const fCols = $('#f-cols'), fRows = $('#f-rows'), fPag = $('#f-paginate');
+  dlgLayout.addEventListener('click', (e) => {
+    if (e.target === dlgLayout) dlgLayout.close(); // klik w tło = anuluj
+  });
+  dlgLayout.addEventListener('cancel', () => dlgLayout.close());
+  $('#dlg-layout-cancel').onclick = () => dlgLayout.close();
+  $('#dlg-layout-ok').onclick = async () => {
+    dlgLayout.close();
+    state.layout = {
+      cols: clampInt(parseInt(fCols.value, 10), 1, 12, LAYOUT_DEFAULTS.cols),
+      rows: clampInt(parseInt(fRows.value, 10), 1, 12, LAYOUT_DEFAULTS.rows),
+      paginate: fPag.checked,
+    };
+    state.view.pages = {};
+    await saveLayout();
+    render();
+    toast(`Układ: ${state.layout.cols} × ${state.layout.rows}${state.layout.paginate ? ' + strony' : ''}`);
   };
 
   $('#file-import').onchange = (e) => {

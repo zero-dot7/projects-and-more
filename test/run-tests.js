@@ -138,7 +138,8 @@ async function main() {
   // 10. GSD import conversion (synthetic sample of real structure)
   await evalJs(`
     window.confirm = (m) => { window.__confirmMsg = m; return true; };
-    save = () => { window.__gsdImported = state.groups; };
+    confirmDlg = async (t, m) => { window.__confirmMsg = m; return true; };
+    save = async () => { window.__gsdImported = state.groups; };
     const sample = {
       dataVersion: 39,
       groups: [
@@ -263,6 +264,46 @@ async function main() {
   `);
   await new Promise(r => setTimeout(r, 300));
   check('tabs: back to all mode renders all groups', await evalJs(`document.querySelectorAll('.group').length`) === 18);
+
+  // 13. Pagination + layout dialog (pkt 7–8)
+  await evalJs(`(async () => {
+    state.view.mode = 'all';
+    state.groups = [{ id: 'g1', name: 'Paged', color: '', collapsed: false, tiles: [] }];
+    for (let i = 0; i < 10; i++) state.groups[0].tiles.push({ id: 't' + i, title: 'T' + i, url: 'https://x' + i + '.pl/', thumb: '' });
+    state.layout = { cols: 3, rows: 2, paginate: true };
+    save = async () => {};
+    render();
+  })()`);
+  await new Promise(r => setTimeout(r, 300));
+  check('pagin: 6 tiles on page 1', await evalJs(`document.querySelectorAll('.tiles .tile').length`) === 6);
+  check('pagin: page-bar present', await evalJs(`document.querySelectorAll('.page-bar').length`) === 1);
+  check('pagin: 4 page buttons (prev+2pages+next)', await evalJs(`document.querySelectorAll('.page-btn').length`) === 4);
+  check('pagin: cols var set on board', await evalJs(`getComputedStyle(document.querySelector('.tiles')).gridTemplateColumns.split(' ').length`) === 3);
+  // click page 2
+  await evalJs(`document.querySelectorAll('.page-btn')[2].click();`);
+  await new Promise(r => setTimeout(r, 200));
+  check('pagin: page 2 shows T6..T9 (4 tiles)', await evalJs(`document.querySelectorAll('.tiles .tile').length`) === 4);
+  check('pagin: page 2 first tile is T6', await evalJs(`document.querySelector('.tiles .tile .t-title').textContent`) === 'T6');
+  // paginate off → all tiles, no bar
+  await evalJs(`state.layout.paginate = false; render();`);
+  await new Promise(r => setTimeout(r, 200));
+  check('pagin: off → all 10 tiles', await evalJs(`document.querySelectorAll('.tiles .tile').length`) === 10);
+  check('pagin: off → no page-bar', await evalJs(`document.querySelectorAll('.page-bar').length`) === 0);
+  // layout dialog saves to storage and applies --cols
+  await evalJs(`(async () => {
+    document.querySelector('#btn-settings').click();
+    document.querySelector('#settings-menu [data-act="layout"]').click();
+    document.querySelector('#f-cols').value = 5;
+    document.querySelector('#f-rows').value = 2;
+    document.querySelector('#f-paginate').checked = true;
+    document.querySelector('#dlg-layout-ok').click();
+  })()`);
+  await new Promise(r => setTimeout(r, 400));
+  const lay = JSON.parse(await evalJs(`JSON.stringify(window.__store.layout || null)`));
+  check('layout: saved cols=5 rows=2 paginate', lay && lay.cols === 5 && lay.rows === 2 && lay.paginate === true);
+  check('layout: dialog closed after ok', await evalJs(`document.querySelector('#dlg-layout').open`) === false);
+  check('layout: 5 columns applied', await evalJs(`getComputedStyle(document.querySelector('.tiles')).gridTemplateColumns.split(' ').length`) === 5);
+  check('layout: pagination with 5×2 → 10 tiles one page', await evalJs(`document.querySelectorAll('.tiles .tile').length`) === 10);
 
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;
