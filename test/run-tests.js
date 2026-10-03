@@ -381,11 +381,38 @@ async function main() {
   check('pkt24: top sites bez przycisku usuń', await evalJs(`(() => { const g = document.querySelector('.group[data-id="__top_sites__"]'); return g.querySelector('.del-group').onclick === null; })()`) === true);
 
   // 25: przełącznik ON/OFF w menu
-  check('pkt25: menu pokazuje „wł."', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wł.'));
+  check('pkt25: menu pokazuje „wł.”', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wł.'));
   await evalJs(`(() => { state.topSites = false; syncTopSitesMenu(); render(); })()`);
   check('pkt25: wyłączenie usuwa zakładkę', await evalJs(`(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.id === '__top_sites__'); return !t; })()`) === true);
-  check('pkt25: menu pokazuje „wył."', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wył.'));
+  check('pkt25: menu pokazuje „wył.”', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wył.'));
   await evalJs(`(() => { state.topSites = true; syncTopSitesMenu(); render(); })()`);
+
+  // 27: licznik kliknięć + ukrywanie w top sites
+  await evalJs(`(() => { state.view.mode = 'tabs'; state.view.activeId = TOP_SITES_ID; render(); })()`);
+  const topUrls = JSON.parse(await evalJs(`JSON.stringify(state.topTiles.map(t => t.url))`));
+  check('pkt27: top sites ma kafelki', topUrls.length >= 3);
+  // klik w kafelek → licznik +1, zapis do storage, reordering (preventDefault — test nie nawiguje)
+  const clickTile = `(() => { const a = document.querySelector('.group[data-id="__top_sites__"] .tile'); const stop = e => e.preventDefault(); window.addEventListener('click', stop, true); a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); window.removeEventListener('click', stop, true); })()`;
+  await evalJs(clickTile);
+  await new Promise(r => setTimeout(r, 200));
+  const clicksAfter = JSON.parse(await evalJs(`JSON.stringify(state.topStats.clicks)`));
+  check('pkt27: klik zapisany w state.topStats', clicksAfter[topUrls[0]] === 1);
+  check('pkt27: licznik zapisany do storage', JSON.parse(await evalJs(`JSON.stringify(window.__store.topSitesStats || {})`)).clicks[topUrls[0]] === 1);
+  check('pkt27: kliknięta strona na miejscu 1', await evalJs(`state.topTiles[0].url`) === topUrls[0]);
+  check('pkt27: badge licznika w DOM', await evalJs(`document.querySelector('.group[data-id="__top_sites__"] .top-clicks').textContent`) === '1');
+  // drugi klik na tę samą stronę → 2
+  await evalJs(clickTile);
+  await new Promise(r => setTimeout(r, 200));
+  check('pkt27: drugi klik → licznik 2', await evalJs(`state.topStats.clicks[${JSON.stringify(topUrls[0])}]`) === 2);
+  // ✕ ukrywa stronę z sekcji (i wskakuje kolejna z listy Brave)
+  await evalJs(`(() => { document.querySelector('.group[data-id="__top_sites__"] .tile .del-tile').click(); })()`);
+  check('pkt27: ✕ ukrywa stronę', await evalJs(`(() => { const h = state.topStats.hidden; return h.includes(${JSON.stringify(topUrls[0])}) && !state.topTiles.some(t => t.url === ${JSON.stringify(topUrls[0])}); })()`) === true);
+  check('pkt27: ukryta strona zapisana w storage', JSON.parse(await evalJs(`JSON.stringify(window.__store.topSitesStats || {})`)).hidden.includes(topUrls[0]));
+  check('pkt27: po ukryciu sekcja nadal pokazuje 10 (pełna lista Brave)', await evalJs(`document.querySelectorAll('.group[data-id="__top_sites__"] .tile').length`) === 10);
+  // reset z menu ⚙ kasuje licznik i ukryte
+  await evalJs(`(() => { document.getElementById('btn-settings').click(); document.querySelector('#settings-menu [data-act="topreset"]').click(); })()`);
+  check('pkt27: reset czyści clicks i hidden', await evalJs(`(() => { const s = window.__store.topSitesStats; return s && Object.keys(s.clicks).length === 0 && s.hidden.length === 0 && state.topTiles.some(t => t.url === ${JSON.stringify(topUrls[0])}); })()`) === true);
+
 
   // 26: miniaturki — przycisk 🖼, kolejka max 2 równoległe, capture + persist + cleanup
   await evalJs(`(() => { state.view.mode = 'all'; render(); })()`); // w tabs widoczna tylko aktywna grupa
@@ -409,4 +436,4 @@ async function main() {
   process.exit(fails ? 1 : 0);
 }
 
-main().catch(e => { console.error('ERROR', e.message); process.exit(2); });
+main().catch(e => { console.error('ERROR', e.message, '\n', e.stack); process.exit(2); });
