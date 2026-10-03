@@ -17,6 +17,15 @@
           async set(obj) { Object.assign(store, obj); },
         },
       },
+      topSites: { // pkt 24 mock
+        async get() {
+          return [
+            { url: 'https://github.com', title: 'GitHub' },
+            { url: 'https://news.ycombinator.com', title: 'Hacker News' },
+            { url: 'https://developer.mozilla.org', title: 'MDN' },
+          ];
+        },
+      },
     },
     writable: false,
   });

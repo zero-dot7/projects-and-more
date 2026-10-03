@@ -23,6 +23,7 @@ const state = {
   filter: '',
   view: { mode: 'all', activeId: null, pages: {} },
   layout: { ...LAYOUT_DEFAULTS },
+  topSites: true, // pkt 24–25: pseudo-grupa „Najczęściej odwiedzane”
 };
 const uid = () => Math.random().toString(36).slice(2, 10);
 const $ = (s) => document.querySelector(s);
@@ -34,7 +35,7 @@ const tplTile = $('#tpl-tile');
 /* ---------- storage ---------- */
 
 async function load() {
-  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout', 'theme']);
+  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout', 'theme', 'topSites']);
   state.groups = Array.isArray(data.groups) && data.groups.length
     ? data.groups
     : structuredClone(DEFAULTS.groups);
@@ -51,6 +52,7 @@ async function load() {
     };
   }
   state.theme = data.theme === 'day' ? 'day' : 'night';
+  state.topSites = data.topSites !== false; // pkt 25: domyślnie włączone
   applyTheme();
 }
 
@@ -99,10 +101,32 @@ function filteredGroups() {
 
 /* ---------- rendering ---------- */
 
+const TOP_SITES_ID = '__top_sites__'; // pkt 24: pseudo-grupa z chrome.topSites
+
+async function fetchTopSites() {
+  try {
+    const sites = await chrome.topSites.get();
+    return (sites || []).slice(0, 10).map(s => ({
+      title: s.title || new URL(s.url).hostname,
+      url: s.url,
+    }));
+  } catch { return []; }
+}
+
+function tabGroups() {
+  if (!state.topSites || !chrome.topSites) return state.groups; // pkt 25: wyłączone lub brak API
+  return [{ id: TOP_SITES_ID, name: '★ Najczęściej odwiedzane', color: 'var(--accent)', tiles: state.topTiles || [], fixed: true }, ...state.groups]; // pkt 24: zawsze pierwsza od lewej
+}
+
 function visibleGroups() {
-  const groups = filteredGroups();
-  if (state.view.mode === 'tabs' && !state.filter) return groups.filter(g => g.id === state.view.activeId);
-  return groups;
+  if (state.view.mode === 'tabs' && !state.filter) {
+    if (state.view.activeId === TOP_SITES_ID) {
+      return [{ id: TOP_SITES_ID, name: '★ Najczęściej odwiedzane', color: 'var(--accent)', tiles: state.topTiles || [], fixed: true }];
+    }
+    const g = filteredGroups().find(g => g.id === state.view.activeId);
+    return g ? [g] : [];
+  }
+  return filteredGroups();
 }
 
 function render() {
@@ -121,7 +145,8 @@ function renderTabBar() {
   const bar = document.createElement('div');
   bar.className = 'tab-bar';
   bar.hidden = !!state.filter; // podczas szukania pokaż wszystkie dopasowania, bez kart
-  for (const g of state.groups) {
+  const groups = tabGroups(); // pkt 24: zwykłe grupy + opcjonalna zakładka Top Sites
+  for (const g of groups) {
     const tab = document.createElement('div');
     tab.className = 'tab' + (g.id === state.view.activeId ? ' active' : '');
     tab.dataset.id = g.id;
@@ -136,7 +161,7 @@ function renderTabBar() {
     tab.append(lbl, cnt);
     tab.onclick = () => selectTab(g.id);
     tab.onauxclick = (e) => { // middle-click closes, jak w przeglądarce
-      if (e.button === 1) { e.preventDefault(); removeGroup(g.id); }
+      if (e.button === 1 && g.id !== TOP_SITES_ID) { e.preventDefault(); removeGroup(g.id); }
     };
     bar.appendChild(tab);
     // drag to reorder tabs
@@ -181,7 +206,7 @@ function removeGroup(id) {
     // jak karty w przeglądarce: aktywna staje się sąsiednia (następna, w braku poprzedniej)
     state.view.activeId = state.groups[Math.min(idx, state.groups.length - 1)]?.id ?? null;
   }
-  if (modeIsTabs() && !state.view.activeId && state.groups.length) state.view.activeId = state.groups[0].id;
+  if (modeIsTabs() && !state.view.activeId && state.groups.length) state.view.activeId = tabGroups()[0].id; // pkt 24: pierwsza od lewej (może być Top Sites)
   save(); render();
 }
 
@@ -198,7 +223,8 @@ const modeIsTabs = () => state.view.mode === 'tabs';
 
 function applyViewMode() {
   document.body.classList.toggle('view-tabs', modeIsTabs());
-  if (modeIsTabs() && !state.groups.some(g => g.id === state.view.activeId)) {
+  if (modeIsTabs() && !state.groups.some(g => g.id === state.view.activeId)
+      && state.view.activeId !== TOP_SITES_ID) { // pkt 24: zakładka Top Sites też może być aktywna
     state.view.activeId = state.groups[0]?.id ?? null;
   }
   render();
@@ -214,6 +240,11 @@ function toggleViewMode() {
 function syncViewMenu() {
   const lbl = $('#view-label');
   if (lbl) lbl.textContent = modeIsTabs() ? '✓ Zakładki grup' : 'Zakładki grup';
+}
+
+function syncTopSitesMenu() { // pkt 25
+  const lbl = $('#topsites-label');
+  if (lbl) lbl.textContent = state.topSites ? '★ Najczęściej odwiedzane: wł.' : '★ Najczęściej odwiedzane: wył.';
 }
 
 /* pkt 14: motyw dzień/noc */
@@ -256,9 +287,10 @@ function renderGroup(g) {
   };
   h2.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); h2.blur(); } };
 
-  el.querySelector('.add-tile').onclick = () => openTileDialog(null, g.id);
-  el.querySelector('.edit-group').onclick = () => openGroupDialog(g);
-  el.querySelector('.del-group').onclick = () => removeGroup(g.id);
+  const fixed = !!g.fixed; // pkt 24: „Najczęściej odwiedzane" — bez edycji/usuwania
+  el.querySelector('.add-tile').onclick = fixed ? null : () => openTileDialog(null, g.id);
+  el.querySelector('.edit-group').onclick = fixed ? null : () => openGroupDialog(g);
+  el.querySelector('.del-group').onclick = fixed ? null : () => removeGroup(g.id);
 
   const tilesEl = el.querySelector('.tiles');
   // pkt 7–8: układ cols × rows z paginacją; kafelki wypełniają szerokość (1fr)
@@ -584,7 +616,7 @@ function convertGsd(data) {
   if (Array.isArray(data.___thumbnails)) {
     for (const t of data.___thumbnails) if (t.url && t.img) thumbs[t.url] = t.img;
   }
-  const PALETTE = ['var(--accent)', '#e5484d', '#46a758', '#00a2c7', '#ffb224', '#8e4ec6'];
+  const PALETTE = ['var(--accent)', '#e5484d', '#46a758', '#00a2c7', '#ffb224', '#8e4ec6', '#f76b15', '#12a594', '#e93a82', '#3e63dd']; // pkt 22: rozszerzona paleta
   const groups = data.groups
     .filter(g => g && !g.archived && Array.isArray(g.dials))
     .map((g, i) => ({
@@ -699,9 +731,11 @@ function toast(msg, ms = 4000) {
 
 async function init() {
   await load();
+  state.topTiles = await fetchTopSites(); // pkt 24
   await dbxLoadSettings();
   applyViewMode();
   syncViewMenu();
+  syncTopSitesMenu();
 
   // settings menu (gear, bottom-left)
   const menu = $('#settings-menu');
@@ -720,6 +754,13 @@ async function init() {
     if (act === 'export') exportJson();
     if (act === 'backup') openBackupDialog();
     if (act === 'view') toggleViewMode();
+    if (act === 'topsites') { // pkt 25
+      state.topSites = !state.topSites;
+      chrome.storage.local.set({ topSites: state.topSites });
+      if (state.view.activeId === TOP_SITES_ID) state.view.activeId = state.groups[0]?.id ?? null;
+      syncTopSitesMenu();
+      render();
+    }
     if (act === 'theme') toggleTheme();
     if (act === 'layout') {
       fCols.value = state.layout.cols;

@@ -200,7 +200,7 @@ async function main() {
   check('tabs: mode switched to tabs', mode === 'tabs');
   check('tabs: body has view-tabs class', await evalJs(`document.body.classList.contains('view-tabs')`) === true);
   let tabCount = await evalJs(`document.querySelectorAll('.tab').length`);
-  check('tabs: one tab per group (19)', tabCount === 19);
+  check('tabs: one tab per group (19+TopSites)', tabCount === 20);
   let activeTabs = await evalJs(`document.querySelectorAll('.tab.active').length`);
   check('tabs: exactly one active', activeTabs === 1);
   let visibleGroups = await evalJs(`document.querySelectorAll('.group').length`);
@@ -235,7 +235,7 @@ async function main() {
 
   // middle-click closes (pkt 12: ✕ removed; close via middle-click)
   await evalJs(`(() => {
-    const t = document.querySelectorAll('.tab')[0];
+    const t = document.querySelectorAll('.tab')[1]; // [0] = Top Sites (pkt 24, nieusuwalna)
     t.dispatchEvent(new MouseEvent('auxclick', { button: 1, bubbles: true }));
   })()`);
   await new Promise(r => setTimeout(r, 200));
@@ -300,7 +300,7 @@ async function main() {
     document.querySelector('#settings-menu [data-act="view"]').click();
   `);
   await new Promise(r => setTimeout(r, 300));
-  check('tabs: back to all mode renders all groups', await evalJs(`document.querySelectorAll('.group').length`) === 18);
+  check('tabs: back to all mode renders all groups', await evalJs(`document.querySelectorAll('.group').length`) === 18); // 17 (po middle-click) + Top Sites (pkt 24)
 
   // 13. Pagination + layout dialog (pkt 7–8)
   await evalJs(`(async () => {
@@ -365,6 +365,27 @@ async function main() {
 
   // 21: minimalna przerwa pasek zakładek ↔ ramka
   check('pkt21: gap tabs→frame ≤ 5px', await evalJs(`document.querySelector('.tab-bar').getBoundingClientRect().top - document.body.getBoundingClientRect().top`) <= 5.5);
+
+  // 22: paleta 10 kolorów w dialogu grupy
+  await evalJs(`(() => { state.view.mode = 'all'; render(); openGroupDialog(null); return document.querySelectorAll('#color-picker .swatch').length; })()`);
+  check('pkt22: 10 swatchy w pickerze', parseInt(await evalJs(`document.querySelectorAll('#color-picker .swatch').length`)) === 10);
+  await evalJs(`document.getElementById('dlg-group').close()`);
+
+  // 23: pogrubiona nazwa grupy
+  check('pkt23: h2 font-weight ≥ 700', parseInt(await evalJs(`getComputedStyle(document.querySelector('.group-head h2')).fontWeight`)) >= 700);
+
+  // 24: zakładka „Najczęściej odwiedzane" (chrome.topSites) w trybie zakładek
+  await evalJs(`(() => { state.topSites = true; state.view.mode = 'tabs'; state.view.activeId = TOP_SITES_ID; render(); })()`);
+  check('pkt24: zakładka top sites istnieje', await evalJs(`(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.id === '__top_sites__'); return !!t; })()`) === true);
+  check('pkt24: kafelki z chrome.topSites widoczne', parseInt(await evalJs(`document.querySelectorAll('.group[data-id="__top_sites__"] .tile').length`)) >= 3);
+  check('pkt24: top sites bez przycisku usuń', await evalJs(`(() => { const g = document.querySelector('.group[data-id="__top_sites__"]'); return g.querySelector('.del-group').onclick === null; })()`) === true);
+
+  // 25: przełącznik ON/OFF w menu
+  check('pkt25: menu pokazuje „wł."', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wł.'));
+  await evalJs(`(() => { state.topSites = false; syncTopSitesMenu(); render(); })()`);
+  check('pkt25: wyłączenie usuwa zakładkę', await evalJs(`(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.id === '__top_sites__'); return !t; })()`) === true);
+  check('pkt25: menu pokazuje „wył."', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wył.'));
+  await evalJs(`(() => { state.topSites = true; syncTopSitesMenu(); render(); })()`);
 
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;
