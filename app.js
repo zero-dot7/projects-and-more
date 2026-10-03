@@ -680,15 +680,6 @@ function toast(msg, ms = 4000) {
   toast._t = setTimeout(() => { t.hidden = true; }, ms);
 }
 
-/* ---------- clock & search ---------- */
-
-function tick() {
-  const d = new Date();
-  $('#clock').textContent =
-    d.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' }) +
-    '  ·  ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-}
-
 /* ---------- init ---------- */
 
 async function init() {
@@ -696,18 +687,6 @@ async function init() {
   await dbxLoadSettings();
   applyViewMode();
   syncViewMenu();
-  tick();
-  setInterval(tick, 15000);
-
-  $('#search').addEventListener('input', (e) => { state.filter = e.target.value; render(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === '/' && document.activeElement !== $('#search')) {
-      e.preventDefault();
-      $('#search').focus();
-    }
-  });
-
-  $('#btn-add-group').onclick = () => openGroupDialog(null);
 
   // settings menu (gear, bottom-left)
   const menu = $('#settings-menu');

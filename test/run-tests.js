@@ -81,12 +81,12 @@ async function main() {
   const tileHref = await evalJs(`[...document.querySelectorAll('.tile')].map(a => a.href).join(' ')`);
   check('normalizeUrl: onet.pl -> https://onet.pl', tileHref.includes('https://onet.pl/'));
 
-  // 4. search filter
-  await evalJs(`(() => { const sf = document.querySelector('#search'); sf.value = 'onet'; sf.dispatchEvent(new Event('input')); })()`);
+  // 4. search filter (0.2.1: no #search input — set state.filter directly)
+  await evalJs(`(() => { state.filter = 'onet'; render(); })()`);
   await new Promise(r => setTimeout(r, 200));
   tiles = await evalJs(`document.querySelectorAll('.tile').length`);
   check('filter: 1 tile for "onet"', tiles === 1);
-  await evalJs(`(() => { const sf2 = document.querySelector('#search'); sf2.value = ''; sf2.dispatchEvent(new Event('input')); })()`);
+  await evalJs(`(() => { state.filter = ''; render(); })()`);
 
   // 5. delete tile (stub confirm first — headless default may auto-accept)
   await evalJs(`window.confirm = () => true;`);
@@ -121,9 +121,9 @@ async function main() {
   const status = await evalJs(`document.querySelector('#dbx-status').textContent`);
   check('dropbox restore: status ok', status.includes('✓'));
 
-  // 8. clock
-  const clock = await evalJs(`document.querySelector('#clock').textContent`);
-  check('clock renders', /\d{2}:\d{2}/.test(clock));
+  // 8. clock removed in 0.2.1 — check header/toolbar are gone and gear toggle works
+  const headerGone = await evalJs(`document.querySelector('header') === null`);
+  check('header removed (0.2.1)', headerGone === true);
 
   // 9. settings menu: hidden options, gear toggles
   const menuHidden0 = await evalJs(`document.querySelector('#settings-menu').hidden`);
@@ -183,8 +183,8 @@ async function main() {
 
   // 12. Tabs view (Brave-style)
   await evalJs(`window.confirm = () => true;`);
-  // clear any active search filter (stale from step 8) — tabs view needs no filter
-  await evalJs(`const s0 = document.querySelector('#search'); s0.value = ''; s0.dispatchEvent(new Event('input'));`);
+  // clear any stale filter — tabs view needs no filter (0.2.1: no #search input)
+  await evalJs(`(() => { state.filter = ''; render(); })()`);
   // start: mode 'all'
   let mode = await evalJs(`state.view.mode`);
   check('tabs: default mode all', mode === 'all');
@@ -249,13 +249,13 @@ async function main() {
   const activeNew = await evalJs(`document.querySelector('.tab.active .tab-label').textContent`);
   check('tabs: new group becomes active tab', activeNew === 'Nowa Zakładka');
 
-  // search in tabs mode: tab-bar hidden, all matches shown
-  await evalJs(`(() => { const probe2 = state.groups[0].name.slice(0, 4); const sr = document.querySelector('#search'); sr.value = probe2; sr.dispatchEvent(new Event('input')); })()`);
+  // search in tabs mode: tab-bar hidden, all matches shown (search input removed in 0.2.1 — set state.filter directly)
+  await evalJs(`(() => { const probe2 = state.groups[0].name.slice(0, 4); state.filter = probe2; render(); })()`);
   await new Promise(r => setTimeout(r, 200));
   const barHidden = await evalJs(`document.querySelector('.tab-bar')?.hidden`);
   const searchGroups = await evalJs(`document.querySelectorAll('.group').length`);
   check('tabs: search shows matches across groups', searchGroups >= 1 && barHidden === true);
-  await evalJs(`(() => { const sc = document.querySelector('#search'); sc.value = ''; sc.dispatchEvent(new Event('input')); })()`);
+  await evalJs(`(() => { state.filter = ''; render(); })()`);
 
   // back to all mode
   await evalJs(`
