@@ -74,6 +74,79 @@ async function saveViewMode() {
   await chrome.storage.local.set({ viewMode: state.view.mode });
 }
 
+/* ---------- pkt 26: generator miniatur (kolejka, max 2 równoległe) ---------- */
+
+const thumbQueue = []; // [{tile, groupId}]
+let thumbActive = 0;
+const THUMB_CONCURRENCY = 2;
+
+function enqueueThumbs(tiles, groupId) {
+  for (const t of tiles) {
+    if (thumbQueue.some(q => q.tile.id === t.id)) continue; // bez duplikatów
+    thumbQueue.push({ tile: t, groupId });
+  }
+  pumpThumbs();
+}
+
+function pumpThumbs() {
+  while (thumbActive < THUMB_CONCURRENCY && thumbQueue.length) {
+    const job = thumbQueue.shift();
+    thumbActive++;
+    makeThumb(job.tile, job.groupId)
+      .catch(() => {}) // błąd = zostaje favicon, kolejka leci dalej
+      .finally(() => { thumbActive--; pumpThumbs(); });
+  }
+}
+
+function findTile(id) {
+  for (const g of state.groups) {
+    const t = g.tiles.find(t => t.id === id);
+    if (t) return t;
+  }
+  return null;
+}
+
+async function makeThumb(tile, groupId) {
+  if (!/^https?:/.test(tile.url)) throw new Error('not http(s)');
+  // okno poza ekranem (nie kradnie fokusu z newtab)
+  const win = await chrome.windows.create({
+    url: tile.url,
+    type: 'popup',
+    left: 8000,
+    top: 8000,
+    width: 1280,
+    height: 800,
+  });
+  const tab = win.tabs?.[0];
+  if (!tab?.id) { await chrome.windows.remove(win.id); throw new Error('no tab'); }
+  try {
+    await chrome.tabs.update(tab.id, { active: true }); // captureVisibleTab łapie aktywne
+    await waitTabsComplete(tab.id, 20000); // onload z limitem 20 s
+    await sleep(1200); // time na JS/render strony
+    const dataUrl = await chrome.tabs.captureVisibleTab(win.id, { format: 'jpeg', quality: 75 });
+    tile.thumb = dataUrl;
+    await save(); // persystencja do storage.local (unlimitedStorage)
+    const live = findTile(tile.id);
+    if (live) live.thumb = dataUrl;
+    render(); // live update kafelka
+  } finally {
+    chrome.windows.remove(win.id).catch(() => {});
+  }
+}
+
+function waitTabsComplete(tabId, timeoutMs) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; chrome.tabs.onUpdated.removeListener(listener); resolve(); } };
+    const listener = (id, info) => { if (id === tabId && info.status === 'complete') finish(); };
+    chrome.tabs.onUpdated.addListener(listener);
+    setTimeout(finish, timeoutMs); // timeout = kontynuuj z tym co jest
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+
 /* ---------- helpers ---------- */
 
 function hostOf(url) {
@@ -289,6 +362,7 @@ function renderGroup(g) {
 
   const fixed = !!g.fixed; // pkt 24: „Najczęściej odwiedzane" — bez edycji/usuwania
   el.querySelector('.add-tile').onclick = fixed ? null : () => openTileDialog(null, g.id);
+  el.querySelector('.thumb-group').onclick = fixed ? null : () => enqueueThumbs(g.tiles, g.id); // pkt 26
   el.querySelector('.edit-group').onclick = fixed ? null : () => openGroupDialog(g);
   el.querySelector('.del-group').onclick = fixed ? null : () => removeGroup(g.id);
 
