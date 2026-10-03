@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Speed Dial</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">⚡ Speed Dial</div>
+  <div id="clock"></div>
+</header>
+
+<div class="toolbar">
+  <input id="search" type="search" placeholder="Szukaj… (/)" autocomplete="off">
+  <button id="btn-add-group" class="primary" title="Dodaj grupę">+ Grupa</button>
+  <input type="file" id="file-import" accept=".json,.group_speed_dial,application/json" hidden>
+</div>
+
+<button id="btn-settings" title="Ustawienia">⚙</button>
+<div id="settings-menu" class="menu" hidden>
+  <button data-act="import">⬆ Importuj backup…</button>
+  <button data-act="export">⬇ Eksportuj JSON</button>
+  <button data-act="view" id="view-label">Zakładki grup</button>
+  <hr>
+  <button data-act="backup">☁ Backup Dropbox…</button>
+</div>
+
+<main id="board"></main>
+
+<footer>
+  <span id="stats"></span>
+</footer>
+
+<dialog id="dlg">
+  <form id="dlg-form" method="dialog">
+    <h3 id="dlg-title">Dodaj kafelek</h3>
+    <label>Tytuł<br><input name="title" id="f-title" required></label>
+    <label>URL<br><input name="url" id="f-url" type="url" placeholder="https://…" required></label>
+    <label id="dlg-group-row">Grupa<br><select name="group" id="f-group"></select></label>
+    <div class="dlg-actions">
+      <button type="button" id="dlg-cancel">Anuluj</button>
+      <button type="submit" class="primary" id="dlg-ok">Zapisz</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-group">
+  <form id="dlg-group-form" method="dialog">
+    <h3 id="dlg-group-title">Nowa grupa</h3>
+    <label>Nazwa<br><input name="name" id="f-group-name" required></label>
+    <label>Kolor
+      <div class="colors" id="color-picker">
+        <button type="button" class="swatch" data-c="var(--accent)" style="--c:var(--accent)"></button>
+        <button type="button" class="swatch" data-c="#e5484d" style="--c:#e5484d"></button>
+        <button type="button" class="swatch" data-c="#46a758" style="--c:#46a758"></button>
+        <button type="button" class="swatch" data-c="#00a2c7" style="--c:#00a2c7"></button>
+        <button type="button" class="swatch" data-c="#ffb224" style="--c:#ffb224"></button>
+        <button type="button" class="swatch" data-c="#8e4ec6" style="--c:#8e4ec6"></button>
+      </div>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" id="dlg-group-cancel">Anuluj</button>
+      <button type="submit" class="primary" id="dlg-group-ok">Zapisz</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-backup">
+  <form method="dialog">
+    <h3>☁ Backup Dropbox</h3>
+    <p class="hint">Backup zapisuje grupy i kafelki do pliku <code>speed-dial-backup.json</code> w folderze aplikacji Dropbox (<code>/Apps/Group Speed Dial/</code>).</p>
+    <label>Token dostępowy (OAuth2 Dropbox, scope files.content.write + files.content.read)<br>
+      <input name="token" id="f-dbx-token" type="password" placeholder="sl.…" autocomplete="off">
+    </label>
+    <label class="chk"><input type="checkbox" id="f-dbx-auto" checked> Auto-backup przy każdej zmianie (co najmniej raz na 5 min)</label>
+    <div id="dbx-status" class="hint"></div>
+    <div class="dlg-actions">
+      <button type="button" id="btn-dbx-restore" title="Wczytaj backup z Dropbox">Wczytaj z Dropbox</button>
+      <span class="spacer"></span>
+      <button type="button" id="dlg-backup-cancel">Anuluj</button>
+      <button type="button" class="primary" id="dlg-backup-ok">Zapisz ustawienia</button>
+    </div>
+  </form>
+</dialog>
+
+<template id="tpl-group">
+  <section class="group" data-id="">
+    <div class="group-head" draggable="false">
+      <button class="chev" title="Zwiń/rozwiń">▸</button>
+      <h2 contenteditable="false" spellcheck="false"></h2>
+      <span class="count"></span>
+      <span class="spacer"></span>
+      <button class="icon-btn add-tile" title="Dodaj kafelek do grupy">+</button>
+      <button class="icon-btn edit-group" title="Edytuj grupę">✎</button>
+      <button class="icon-btn del-group" title="Usuń grupę">🗑</button>
+    </div>
+    <div class="tiles"></div>
+  </section>
+</template>
+
+<template id="tpl-tile">
+  <a class="tile" draggable="true" href="#">
+    <span class="thumb">
+      <img class="fav" alt="" draggable="false">
+      <span class="letter"></span>
+    </span>
+    <span class="t-title"></span>
+    <span class="t-host"></span>
+    <span class="tile-actions">
+      <button class="icon-btn edit-tile" title="Edytuj">✎</button>
+      <button class="icon-btn del-tile" title="Usuń">✕</button>
+    </span>
+  </a>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
