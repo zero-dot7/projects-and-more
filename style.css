@@ -17,6 +17,9 @@ html[data-theme="day"] {
   --text: #1b1f24;
   --muted: #5f6368;
   --border: #d8dce1;
+  /* pkt 15/16: ikony +/-✎/🗑 czytelne w trybie dziennym */
+  --icon-chip: rgba(255,255,255,.85);
+  --icon-glyph: #1b1f24;
 }
 
 * { box-sizing: border-box; }
@@ -172,9 +175,9 @@ main { padding: 0 28px 90px; }
 }
 .tile:hover .tile-actions { display: flex; }
 .icon-btn {
-  background: rgba(0,0,0,.55);
+  background: var(--icon-chip, rgba(0,0,0,.55));
   border: none;
-  color: var(--text);
+  color: var(--icon-glyph, var(--text));
   border-radius: 6px;
   padding: 3px 7px;
   font-size: 12px;
@@ -309,7 +312,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   padding: 7px 14px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 999px; /* pill */
+  border-radius: 0; /* pkt 17: prostokątne zakładki (było 999px/pill) */
   color: var(--muted);
   cursor: pointer;
   font: inherit;
@@ -348,7 +351,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 
 .tab-new {
   padding: 7px 14px;
-  border-radius: 999px;
+  border-radius: 0; /* pkt 17: prostokątna jak zakładki */
   background: transparent;
   color: var(--muted);
   font-size: 16px;
