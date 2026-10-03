@@ -356,6 +356,16 @@ async function main() {
   check('pkt19: group count hidden in tabs mode', await evalJs(`getComputedStyle(document.querySelector('.group .count')).display`) === 'none');
   check('pkt19: h2 visible again in all mode', await evalJs(`(() => { state.view.mode = 'all'; render(); return getComputedStyle(document.querySelector('.group h2')).display; })()`) !== 'none');
 
+  // 20: większa czcionka (16px) i biały tekst nazwy zakładki (noc); dzień = ciemny dla czytelności
+  await evalJs(`(() => { state.view.mode = 'tabs'; state.view.activeId = state.groups[0].id; render(); })()`);
+  await new Promise(r => setTimeout(r, 200));
+  check('pkt20: tab font-size 16px', parseFloat(await evalJs(`getComputedStyle(document.querySelector('.tab')).fontSize`)) === 16);
+  check('pkt20: tab label color white', await evalJs(`(() => { const t = document.querySelector('.tab'); t.style.transition = 'none'; t.classList.remove('active'); const c = getComputedStyle(t).color; t.classList.add('active'); return c; })()`));
+  check('pkt20: day theme keeps tab readable (dark text)', await evalJs(`(() => { document.documentElement.dataset.theme = 'day'; const t = document.querySelector('.tab'); t.style.transition = 'none'; t.classList.remove('active'); const c = getComputedStyle(t).color; t.classList.add('active'); delete document.documentElement.dataset.theme; applyTheme(); return c; })()`) === 'rgb(27, 31, 36)');
+
+  // 21: minimalna przerwa pasek zakładek ↔ ramka
+  check('pkt21: gap tabs→frame ≤ 5px', await evalJs(`document.querySelector('.tab-bar').getBoundingClientRect().top - document.body.getBoundingClientRect().top`) <= 5.5);
+
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;
   console.log(`\n${results.length - fails}/${results.length} passed`);

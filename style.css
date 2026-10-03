@@ -7,6 +7,7 @@
   --accent: #fb542b;
   --border: #2c323b;
   --radius: 12px;
+  --tab-label: #ffffff; /* pkt 20: biały tekst zakładek */
 }
 
 /* pkt 14: motyw dzienny — nadpisywany przez [data-theme="day"] na <html> */
@@ -17,6 +18,7 @@ html[data-theme="day"] {
   --text: #1b1f24;
   --muted: #5f6368;
   --border: #d8dce1;
+  --tab-label: #1b1f24; /* pkt 20: w motywie dziennym ciemny tekst zakładek */
   /* pkt 15/16: ikony +/-✎/🗑 czytelne w trybie dziennym */
   --icon-chip: rgba(255,255,255,.85);
   --icon-glyph: #1b1f24;
@@ -338,10 +340,10 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0; /* pkt 17: prostokątne zakładki (było 999px/pill) */
-  color: var(--muted);
+  color: var(--tab-label, var(--text)); /* pkt 20: biały tekst zakładek */
   cursor: pointer;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 16px; /* pkt 20: większa czcionka nazwy zakładki (było 13.5px) */
   transition: background .12s, color .12s, border-color .12s;
 }
 .tab:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
@@ -404,7 +406,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 }
 .toast[hidden] { display: none; }
 
-body.view-tabs #board { border-top: 1px solid var(--border); padding-top: 16px; }
+body.view-tabs #board { border-top: 1px solid var(--border); padding-top: 4px; } /* pkt 21: minimalna przerwa zakładki–ramka (było 16px) */
 body.view-tabs .chev { display: none; } /* w trybie zakładek nie zwijamy grup */
 
 
