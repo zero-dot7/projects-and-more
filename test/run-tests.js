@@ -342,6 +342,20 @@ async function main() {
   check('layout: 5 columns applied', await evalJs(`getComputedStyle(document.querySelector('.tiles')).gridTemplateColumns.split(' ').length`) === 5);
   check('layout: pagination with 5×2 → 10 tiles one page', await evalJs(`document.querySelectorAll('.tiles .tile').length`) === 10);
 
+  // 18: kafelek landscape — zrzut 4:3 na górze + pasek favicon/tytuł (IMG2/IMG8)
+  check('pkt18: thumb aspect-ratio landscape', await evalJs(`(() => { const v = getComputedStyle(document.querySelector('.tile .thumb')).aspectRatio; const [w,h] = v.split('/').map(Number); return w/h; })()`) === 1.6);
+  check('pkt18: tile-cap present with favicon img', await evalJs(`!!document.querySelector('.tile .tile-cap .cap-fav')`));
+  check('pkt18: tile is wide (aspect < 1 vertical)', await evalJs(`(() => { const t = document.querySelector('.tile'); const r = t.getBoundingClientRect(); return r.width > r.height; })()`));
+  check('pkt18: t-host below tile', await evalJs(`(() => { const t = document.querySelector('.tile').getBoundingClientRect(); const h = document.querySelector('.tile .t-host').getBoundingClientRect(); return h.top >= t.bottom - 2; })()`));
+
+  // 19: w trybie zakładek nagłówek grupy ukryty, pasek zakładek zostaje
+  await evalJs(`(() => { state.view.mode = 'tabs'; state.view.activeId = state.groups[0].id; render(); })()`);
+  await new Promise(r => setTimeout(r, 200));
+  check('pkt19: tab-bar visible in tabs mode', await evalJs(`document.querySelectorAll('.tab-bar').length === 1 && !document.querySelector('.tab-bar').hidden`));
+  check('pkt19: group h2 hidden in tabs mode', await evalJs(`getComputedStyle(document.querySelector('.group h2')).display`) === 'none');
+  check('pkt19: group count hidden in tabs mode', await evalJs(`getComputedStyle(document.querySelector('.group .count')).display`) === 'none');
+  check('pkt19: h2 visible again in all mode', await evalJs(`(() => { state.view.mode = 'all'; render(); return getComputedStyle(document.querySelector('.group h2')).display; })()`) !== 'none');
+
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;
   console.log(`\n${results.length - fails}/${results.length} passed`);
