@@ -242,7 +242,11 @@ footer {
   color: var(--muted);
   font-size: 12.5px;
   background: linear-gradient(transparent, var(--bg) 40%);
+  display: flex;
+  justify-content: space-between;
 }
+/* pkt 36: licznik miniatur po prawej */
+footer #thumb-stats { text-align: right; }
 
 dialog {
   background: var(--panel);

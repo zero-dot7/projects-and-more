@@ -369,7 +369,7 @@ async function main() {
 
   // 22: paleta 10 kolorów w dialogu grupy
   await evalJs(`(() => { state.view.mode = 'all'; render(); openGroupDialog(null); return document.querySelectorAll('#color-picker .swatch').length; })()`);
-  check('pkt22: 10 swatchy w pickerze', parseInt(await evalJs(`document.querySelectorAll('#color-picker .swatch').length`)) === 10);
+  check('pkt34: 20 swatchy w pickerze', parseInt(await evalJs(`document.querySelectorAll('#color-picker .swatch').length`)) === 20);
   await evalJs(`document.getElementById('dlg-group').close()`);
 
   // 23: pogrubiona nazwa grupy
