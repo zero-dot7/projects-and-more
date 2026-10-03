@@ -34,7 +34,7 @@ const tplTile = $('#tpl-tile');
 /* ---------- storage ---------- */
 
 async function load() {
-  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout']);
+  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout', 'theme']);
   state.groups = Array.isArray(data.groups) && data.groups.length
     ? data.groups
     : structuredClone(DEFAULTS.groups);
@@ -50,6 +50,8 @@ async function load() {
       paginate: data.layout.paginate !== false,
     };
   }
+  state.theme = data.theme === 'day' ? 'day' : 'night';
+  applyTheme();
 }
 
 function clampInt(v, min, max, dflt) {
@@ -131,15 +133,7 @@ function renderTabBar() {
     const cnt = document.createElement('span');
     cnt.className = 'tab-count';
     cnt.textContent = g.tiles.length ? String(g.tiles.length) : '';
-    const x = document.createElement('button');
-    x.className = 'tab-close';
-    x.title = 'Usuń grupę';
-    x.innerHTML = '✕';
-    x.onclick = (e) => {
-      e.stopPropagation();
-      removeGroup(g.id);
-    };
-    tab.append(lbl, cnt, x);
+    tab.append(lbl, cnt);
     tab.onclick = () => selectTab(g.id);
     tab.onauxclick = (e) => { // middle-click closes, jak w przeglądarce
       if (e.button === 1) { e.preventDefault(); removeGroup(g.id); }
@@ -220,6 +214,19 @@ function toggleViewMode() {
 function syncViewMenu() {
   const lbl = $('#view-label');
   if (lbl) lbl.textContent = modeIsTabs() ? '✓ Zakładki grup' : 'Zakładki grup';
+}
+
+/* pkt 14: motyw dzień/noc */
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
+  const lbl = $('#theme-label');
+  if (lbl) lbl.textContent = state.theme === 'day' ? '☾ Tryb nocny' : '☀ Tryb dzienny';
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'day' ? 'night' : 'day';
+  chrome.storage.local.set({ theme: state.theme });
+  applyTheme();
 }
 
 function renderGroup(g) {
@@ -705,6 +712,7 @@ async function init() {
     if (act === 'export') exportJson();
     if (act === 'backup') openBackupDialog();
     if (act === 'view') toggleViewMode();
+    if (act === 'theme') toggleTheme();
     if (act === 'layout') {
       fCols.value = state.layout.cols;
       fRows.value = state.layout.rows;

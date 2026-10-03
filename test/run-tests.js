@@ -221,23 +221,46 @@ async function main() {
   const savedMode = await evalJs(`window.__store.viewMode`);
   check('tabs: viewMode persisted to storage', savedMode === 'tabs');
 
-  // close active tab via ✕ -> neighbor becomes active
+  // close active tab (pkt 12: no ✕ button — middle-click / auxclick) -> neighbor becomes active
   const beforeTabs = await evalJs(`document.querySelectorAll('.tab').length`);
-  await evalJs(`document.querySelector('.tab.active .tab-close').click();`);
+  await evalJs(`
+    const t = document.querySelector('.tab.active');
+    t.dispatchEvent(new MouseEvent('auxclick', { button: 1, bubbles: true }));
+  `);
   await new Promise(r => setTimeout(r, 200));
   const afterTabs = await evalJs(`document.querySelectorAll('.tab').length`);
   const groupsOnBoard = await evalJs(`document.querySelectorAll('.group').length`);
   check('tabs: close tab removes group (n-1)', beforeTabs - afterTabs === 1);
   check('tabs: neighbor becomes active after close', activeTabs === 1 && groupsOnBoard === 1);
 
-  // middle-click closes
-  await evalJs(`
+  // middle-click closes (pkt 12: ✕ removed; close via middle-click)
+  await evalJs(`(() => {
     const t = document.querySelectorAll('.tab')[0];
     t.dispatchEvent(new MouseEvent('auxclick', { button: 1, bubbles: true }));
-  `);
+  })()`);
   await new Promise(r => setTimeout(r, 200));
   const afterMid = await evalJs(`document.querySelectorAll('.tab').length`);
   check('tabs: middle-click closes tab', afterMid === afterTabs - 1);
+
+  // pkt 12: no ✕ button on tabs (close via middle-click / group menu only)
+  const closeBtns = await evalJs(`document.querySelectorAll('.tab-close').length`);
+  check('tabs: no ✕ close button on tabs (0.2.2)', closeBtns === 0);
+
+  // pkt 13: active tab is green (default --tab-active)
+  const activeBg = await evalJs(`getComputedStyle(document.querySelector('.tab.active')).backgroundColor`);
+  check('tabs: active tab green (0.2.2)', /69db7c|105, 219, 124/i.test(activeBg));
+
+  // pkt 14: day/night theme toggle
+  await evalJs(`document.querySelector('[data-act="theme"]').click();`);
+  const themeAttr = await evalJs(`document.documentElement.dataset.theme`);
+  const savedTheme = await evalJs(`window.__store.theme`);
+  const dayBg = await evalJs(`getComputedStyle(document.body).backgroundColor`);
+  check('theme: toggle switches to day', themeAttr === 'day');
+  check('theme: persisted to storage', savedTheme === 'day');
+  check('theme: day background applied', /f5f6f8|245, 246, 248/i.test(dayBg));
+  await evalJs(`document.querySelector('[data-act="theme"]').click();`);
+  const themeBack = await evalJs(`document.documentElement.dataset.theme`);
+  check('theme: toggle back to night', themeBack === 'night');
 
   // new group via "+" becomes active
   await evalJs(`

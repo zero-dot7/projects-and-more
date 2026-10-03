@@ -9,6 +9,16 @@
   --radius: 12px;
 }
 
+/* pkt 14: motyw dzienny — nadpisywany przez [data-theme="day"] na <html> */
+html[data-theme="day"] {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #eceef1;
+  --text: #1b1f24;
+  --muted: #5f6368;
+  --border: #d8dce1;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -308,11 +318,11 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 }
 .tab:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
 .tab.active {
-  background: var(--tab-active, #339af0);
-  color: #fff;
+  background: var(--tab-active, #69db7c);
+  color: #1b1f24;
   border-color: transparent;
 }
-.tab.active:hover { background: var(--tab-active, #339af0); filter: brightness(1.08); }
+.tab.active:hover { background: var(--tab-active, #69db7c); filter: brightness(1.08); }
 .tab .dot {
   flex: none;
   width: 8px; height: 8px;
@@ -332,23 +342,9 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   border-radius: 8px;
   padding: 1px 6px;
 }
-.tab.active .tab-count { color: #fff; background: rgba(255,255,255,.2); }
-.tab-close {
-  flex: none;
-  background: none;
-  border: none;
-  color: var(--muted);
-  padding: 1px 6px;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.2;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity .12s;
-}
-.tab:hover .tab-close, .tab.active .tab-close { opacity: 1; }
-.tab-close:hover { color: var(--text); background: var(--panel-2); }
-.tab.active .tab-close { color: var(--text); }
+.tab.active .tab-count { color: #1b1f24; background: rgba(0,0,0,.15); }
+
+/* pkt 12: .tab-close usunięty — zamykanie przez middle-click lub menu grupy */
 
 .tab-new {
   padding: 7px 14px;
