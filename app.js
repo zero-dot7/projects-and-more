@@ -53,6 +53,7 @@ async function load() {
   }
   state.theme = data.theme === 'day' ? 'day' : 'night';
   state.topSites = data.topSites !== false; // pkt 25: domyślnie włączone
+  state.topStats = data.topSitesStats || { clicks: {}, hidden: [] }; // pkt 27: licznik + ukryte
   applyTheme();
 }
 
@@ -179,11 +180,46 @@ const TOP_SITES_ID = '__top_sites__'; // pkt 24: pseudo-grupa z chrome.topSites
 async function fetchTopSites() {
   try {
     const sites = await chrome.topSites.get();
-    return (sites || []).slice(0, 10).map(s => ({
+    state._topAll = (sites || []).map(s => ({ // pełna lista, bez cięcia
       title: s.title || new URL(s.url).hostname,
       url: s.url,
     }));
+    return applyTopStats(state._topAll);
   } catch { return []; }
+}
+
+/* pkt 27: własny ranking — ukryte odpadają, kliknięte lecą wyżej (stabilnie),
+   zdalna kolejność Brave zostaje dla remisów; pokazujemy top 10 */
+function applyTopStats(list) {
+  const { clicks = {}, hidden = [] } = state.topStats || {};
+  return list
+    .filter(t => !hidden.includes(t.url))
+    .sort((a, b) => (clicks[b.url] || 0) - (clicks[a.url] || 0))
+    .slice(0, 10)
+    .map(t => ({ ...t, clicks: clicks[t.url] || 0 }));
+}
+
+function bumpTopSite(url) { // pkt 27: klik w kafelek top sites
+  if (!url) return;
+  state.topStats.clicks[url] = (state.topStats.clicks[url] || 0) + 1;
+  chrome.storage.local.set({ topSitesStats: state.topStats });
+  state.topTiles = applyTopStats(state._topAll || []);
+  const badge = document.querySelector(`.group[data-id="${TOP_SITES_ID}"] .tile[data-url="${CSS.escape(url)}"] .top-clicks`); // aktualizacja badge bez pełnego re-renderu
+  if (badge) badge.textContent = state.topStats.clicks[url];
+}
+
+function hideTopSite(url) { // pkt 27: ✕ ukrywa stronę z sekcji (do resetu w menu)
+  if (!state.topStats.hidden.includes(url)) state.topStats.hidden.push(url);
+  chrome.storage.local.set({ topSitesStats: state.topStats });
+  state.topTiles = applyTopStats(state._topAll || []);
+  render();
+}
+
+function resetTopStats() { // pkt 27: „↺ Reset" w menu ⚙ — kasuje licznik i ukryte
+  state.topStats = { clicks: {}, hidden: [] };
+  chrome.storage.local.set({ topSitesStats: state.topStats });
+  state.topTiles = applyTopStats(state._topAll || []);
+  render();
 }
 
 function tabGroups() {
@@ -410,6 +446,18 @@ function renderTile(t, g) {
   a.querySelector('.t-title').textContent = t.title;
   a.querySelector('.t-host').textContent = hostOf(t.url);
 
+  const isTop = g.id === TOP_SITES_ID; // pkt 27
+  if (isTop) {
+    a.classList.add('top-tile');
+    a.dataset.url = t.url; // pkt 27: cel dla aktualizacji badge bez re-renderu
+    a.addEventListener('click', () => bumpTopSite(t.url), true); // pkt 27: policz klik (capture, przed nawigacją)
+    const badge = document.createElement('span');
+    badge.className = 'top-clicks';
+    badge.textContent = t.clicks ? String(t.clicks) : '';
+    badge.title = 'kliknięć w speed dialu';
+    a.appendChild(badge);
+  }
+
   const img = a.querySelector('.fav');
   const letter = a.querySelector('.letter');
   if (t.thumb) {
@@ -430,6 +478,7 @@ function renderTile(t, g) {
   a.querySelector('.edit-tile').onclick = (e) => { e.preventDefault(); e.stopPropagation(); openTileDialog(t, g.id); };
   a.querySelector('.del-tile').onclick = (e) => {
     e.preventDefault(); e.stopPropagation();
+    if (isTop) { hideTopSite(t.url); return; } // pkt 27: w top sites ✕ = ukryj z sekcji
     g.tiles = g.tiles.filter(x => x.id !== t.id);
     save(); render();
   };
@@ -835,6 +884,7 @@ async function init() {
       syncTopSitesMenu();
       render();
     }
+    if (act === 'topreset') resetTopStats(); // pkt 27
     if (act === 'theme') toggleTheme();
     if (act === 'layout') {
       fCols.value = state.layout.cols;

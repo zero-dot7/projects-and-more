@@ -202,6 +202,21 @@ main { padding: 0 28px 90px; }
   gap: 2px;
 }
 .tile:hover .tile-actions { display: flex; }
+.top-clicks { /* pkt 27: licznik kliknięć na kafelku top sites */
+  position: absolute;
+  top: 4px; left: 4px;
+  z-index: 2;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 9px;
+  background: var(--icon-chip, rgba(0,0,0,.55));
+  color: var(--icon-glyph, var(--text));
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+.top-clicks:empty { display: none; }
 .icon-btn {
   background: var(--icon-chip, rgba(0,0,0,.55));
   border: none;
