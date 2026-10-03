@@ -26,6 +26,31 @@
           ];
         },
       },
+      windows: { // pkt 26 mock
+        async create(o) {
+          window.__thumbWins = window.__thumbWins || [];
+          window.__thumbWins.push(o);
+          return { id: 900 + window.__thumbWins.length, tabs: [{ id: 500 + window.__thumbWins.length }] };
+        },
+        async remove(id) {
+          window.__thumbRemoved = window.__thumbRemoved || [];
+          window.__thumbRemoved.push(id);
+        },
+      },
+      tabs: { // pkt 26 mock
+        onUpdated: {
+          _ls: [],
+          addListener(fn) { this._ls.push(fn); },
+          removeListener(fn) { this._ls = this._ls.filter(f => f !== fn); },
+          fire(id, info) { for (const fn of [...this._ls]) fn(id, info); },
+        },
+        async update(id, o) { setTimeout(() => chrome.tabs.onUpdated.fire(id, { status: 'complete' }), 10); return { id }; },
+        __captures: window.__captures = [],
+        async captureVisibleTab(winId, opts) { // pkt 26: pod chrome.tabs jak w prawdziwym API
+          window.__captures.push({ winId, opts });
+          return 'data:image/jpeg;base64,THUMB' + winId;
+        },
+      },
     },
     writable: false,
   });

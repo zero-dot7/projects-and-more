@@ -387,6 +387,21 @@ async function main() {
   check('pkt25: menu pokazuje „wył."', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wył.'));
   await evalJs(`(() => { state.topSites = true; syncTopSitesMenu(); render(); })()`);
 
+  // 26: miniaturki — przycisk 🖼, kolejka max 2 równoległe, capture + persist + cleanup
+  await evalJs(`(() => { state.view.mode = 'all'; render(); })()`); // w tabs widoczna tylko aktywna grupa
+  check('pkt26: przycisk 🖼 w nagłówku grupy', await evalJs(`!!document.querySelector('.group .thumb-group')`) === true);
+  // kolejka: klik 🖼 na WSZYSTKICH zwykłych grupach; liczba kafelków liczona dynamicznie
+  const tileTotal = parseInt(await evalJs(`state.groups.reduce((n, g) => n + g.tiles.length, 0)`));
+  await evalJs(`(() => { for (const b of document.querySelectorAll('.group .thumb-group')) b.click(); })()`);
+  await new Promise(r => setTimeout(r, 400));
+  check('pkt26: kolejka max 2 równoległe (w locie)', await evalJs(`window.__thumbWins.length <= 2`) === true);
+  await new Promise(r => setTimeout(r, 4000 + tileTotal * 1500)); // dokończ kolejkę (fazy po ~1.3 s)
+  check('pkt26: capture dla każdego kafelka', parseInt(await evalJs(`(window.__captures || []).length`)) === tileTotal);
+  check('pkt26: okna poza ekranem', await evalJs(`(window.__thumbWins || []).every(w => w.left > 0 && w.top > 0 && w.type === 'popup')`) === true);
+  check('pkt26: okna zamknięte po capture', await evalJs(`(window.__thumbRemoved || []).length === (window.__thumbWins || []).length`) === true);
+  check('pkt26: thumb zapisany w storage', await evalJs(`(() => { const t = state.groups.flatMap(g => g.tiles).find(t => t.thumb); return !!t && t.thumb.startsWith('data:image/jpeg'); })()`) === true);
+  check('pkt26: thumb widoczny w DOM', await evalJs(`!!document.querySelector('.tile.has-thumb img.fav[src^="data:image/jpeg"]')`) === true);
+
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;
   console.log(`\n${results.length - fails}/${results.length} passed`);
