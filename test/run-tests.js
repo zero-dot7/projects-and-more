@@ -262,6 +262,20 @@ async function main() {
   const themeBack = await evalJs(`document.documentElement.dataset.theme`);
   check('theme: toggle back to night', themeBack === 'night');
 
+  // pkt 15/16: ikony (✎/🗑/+ nad grupą, ✎/✕ na kafelku) czytelne w trybie dziennym
+  await evalJs(`document.querySelector('[data-act="theme"]').click();`); // -> day
+  const iconChipDay = await evalJs(`getComputedStyle(document.querySelector('.icon-btn')).backgroundColor`);
+  const iconGlyphDay = await evalJs(`getComputedStyle(document.querySelector('.icon-btn')).color`);
+  check('theme: day icon chips light (0.2.3)', /255, 255, 255/i.test(iconChipDay));
+  check('theme: day icon glyphs dark (0.2.3)', /27, 31, 36|1b1f24/i.test(iconGlyphDay));
+  await evalJs(`document.querySelector('[data-act="theme"]').click();`); // -> night
+  const iconChipNight = await evalJs(`getComputedStyle(document.querySelector('.icon-btn')).backgroundColor`);
+  check('theme: night icon chips dark (0.2.3)', /0, 0, 0/i.test(iconChipNight));
+
+  // pkt 17: prostokątne zakładki (bez zaokrągleń)
+  const tabRadius = await evalJs(`getComputedStyle(document.querySelector('.tab')).borderRadius`);
+  check('tabs: rectangular shape, no rounding (0.2.3)', tabRadius === '0px');
+
   // new group via "+" becomes active
   await evalJs(`
     openGroupDialog(null);
