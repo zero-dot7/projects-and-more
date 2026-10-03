@@ -306,7 +306,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 
 #btn-new-group { /* pkt 30: stały przycisk nowej grupy, prawy górny róg */
   position: fixed;
-  top: 14px;
+  top: 2px; /* pkt 33: podniesiony (było 14px) */
   right: 18px;
   width: 40px;
   height: 40px;
@@ -315,10 +315,10 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   line-height: 1;
   padding: 0;
   z-index: 50;
-  opacity: .55;
+  /* pkt 33: bez opacity — półprzezroczyste tło prześwituje i widać "ducha" + spod paska zakładek */
   background: var(--panel);
 }
-#btn-new-group:hover { opacity: 1; }
+#btn-new-group:hover { background: var(--border); }
 
 .menu {
   position: fixed;
@@ -367,8 +367,8 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 120px;
-  max-width: 230px;
+  min-width: 0; /* pkt 32: szerokość wg zawartości (było 120px → puste ramki przy AI/IN/FIN) */
+  max-width: 300px; /* pkt 32: więcej miejsca na długie nazwy (było 230px → ucinanie) */
   padding: 7px 14px;
   background: transparent;
   border: 1px solid transparent;
