@@ -17,6 +17,7 @@
       <button data-act="import">⬆ Importuj backup…</button>
       <button data-act="export">⬇ Eksportuj JSON</button>
       <button data-act="view" id="view-label">Zakładki grup</button>
+      <button data-act="layout">▦ Układ kafelków…</button>
       <hr>
       <button data-act="backup">☁ Backup Dropbox…</button>
     </div>
@@ -25,6 +26,7 @@
   <input type="file" id="file-import" accept="application/json" hidden>
 </div>
 <main id="board"></main>
+<div id="toast" class="toast" hidden></div>
 <footer><span id="stats"></span></footer>
 
 <dialog id="dlg">
@@ -57,6 +59,19 @@
     <div class="dlg-actions">
       <button type="button" id="dlg-group-cancel">Anuluj</button>
       <button type="submit" class="primary" id="dlg-group-ok">Zapisz</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-layout">
+  <form method="dialog">
+    <h3>▦ Układ kafelków</h3>
+    <label>Liczba kolumn<br><input type="number" id="f-cols" min="1" max="12" step="1" value="6"></label>
+    <label>Liczba rzędów<br><input type="number" id="f-rows" min="1" max="12" step="1" value="4"></label>
+    <label class="chk"><input type="checkbox" id="f-paginate" checked> Podziel na strony, gdy kafelków > cols × rzędy</label>
+    <div class="dlg-actions">
+      <button type="button" id="dlg-layout-cancel">Anuluj</button>
+      <button type="button" class="primary" id="dlg-layout-ok">Zapisz</button>
     </div>
   </form>
 </dialog>
