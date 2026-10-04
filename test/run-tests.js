@@ -412,7 +412,7 @@ async function main() {
     document.createElement = (t) => t === 'a' ? a : orig(t);
     try { exportJson(); } catch (e) { name = 'ERR:' + e.message; }
     document.createElement = orig; URL.createObjectURL = origCreate; URL.revokeObjectURL = origRevoke;
-    return /^speed-dial-backup_\\d{2}:\\d{2}:\\d{2}_\\d{2}:\\d{2}\\.json$/.test(name);
+    return /^speed-dial-backup_\\d{2}-\\d{2}-\\d{2}_\\d{2}-\\d{2}\\.json$/.test(name);
   })()`) === true);
 
   console.log(results.join('\n'));
