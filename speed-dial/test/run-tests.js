@@ -114,8 +114,15 @@ async function main() {
   const upCall = await evalJs(`(window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0]`);
   const argHdr = await evalJs(`((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).headers?.['Dropbox-API-Arg'] || ''`);
   check('dropbox: overwrite mode', argHdr.includes('overwrite'));
-  const body = await evalJs(`((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).body || ''`);
-  check('dropbox: body has groups', body.includes('"groups"'));
+  const bodyChecks = await evalJs(`(() => {
+    const b = ((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).body;
+    return JSON.stringify({ isBytes: b instanceof Uint8Array, text: typeof b === 'string' ? b : new TextDecoder().decode(b) });
+  })()`);
+  const bodyInfo = JSON.parse(bodyChecks);
+  check('dropbox: body is bytes (octet-stream)', bodyInfo.isBytes === true);
+  check('dropbox: body has groups', bodyInfo.text.includes('"groups"'));
+  const ctHdr = await evalJs(`((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).headers?.['Content-Type'] || ''`);
+  check('dropbox: Content-Type octet-stream', ctHdr === 'application/octet-stream');
 
   // 7. Dropbox restore
   await evalJs(`
