@@ -171,6 +171,23 @@ async function main() {
   check('gsd import: thumbnail matched to tile', g.groups[0]?.tiles[0]?.thumb === 'data:image/png;base64,AAA');
   check('gsd import: confirm shows counts', /2 groups, 2 tiles/.test(g.confirm));
 
+  // (fixture backup-real usunięty — prywatne dane) seed deterministyczny na testy widoków:
+  await evalJs(`(() => {
+    state.groups = Array.from({ length: 19 }, (_, i) => ({
+      id: 'seed' + i,
+      name: 'Seed ' + (i + 1),
+      color: '#46a758',
+      collapsed: false,
+      tiles: Array.from({ length: 2 }, (_, j) => ({
+        id: 'seed' + i + 't' + j,
+        title: 'T ' + i + '.' + j,
+        url: 'https://example.com/' + i + '/' + j,
+        thumb: ''
+      }))
+    }));
+    render();
+  })()`);
+
   // 12. Tabs view (Brave-style)
   await evalJs(`window.confirm = () => true;`);
   // clear any stale filter — tabs view needs no filter (0.2.1: no #search input)
