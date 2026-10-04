@@ -373,7 +373,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
 /* pkt 43: zamiast pełnego wypełnienia (pkt 28) pasek koloru NAD nazwą zakładki */
 .tab.active {
   background: transparent;
-  border-top: 4px solid var(--gcolor, var(--tab-active, #69db7c));
+  border-top: 5px solid var(--gcolor, var(--tab-active, #69db7c));
   color: var(--text);
   padding-top: 3px; /* 7px - 4px, zachowana wysokość */
 }

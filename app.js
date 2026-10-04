@@ -669,7 +669,7 @@ function exportJson() {
   // pkt 47: nazwa pliku z datą YY-MM-DD i czasem HH-MM (dwukropek nielegalny w nazwach plików)
   const d = new Date();
   const pad = n => String(n).padStart(2, '0');
-  a.download = `speed-dial-backup_${pad(d.getFullYear() % 100)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}.json`;
+  a.download = `speed-dial-backup_${pad(d.getFullYear() % 100)}:${pad(d.getMonth() + 1)}:${pad(d.getDate())}_${pad(d.getHours())}:${pad(d.getMinutes())}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
