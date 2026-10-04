@@ -95,19 +95,20 @@ async function main() {
   const cnt = await evalJs(`window.__store.groups.reduce((n,g)=>n+g.tiles.length,0)`);
   check('delete tile: storage count decremented', cnt === 6); // one tile deleted from 7
 
-  // 6. Dropbox: save token + push (mocked fetch)
+  // 6. Dropbox: OAuth connect + push (mocked fetch + identity)
   await evalJs(`
     openBackupDialog();
-    document.querySelector('#f-dbx-token').value = 'sl.TESTTOKEN';
-    document.querySelector('#f-dbx-auto').checked = true;
-    document.querySelector('#dlg-backup-ok').click();
+    document.querySelector('#btn-dbx-connect').click();
   `);
   await new Promise(r => setTimeout(r, 500));
-  const calls = await evalJs(`JSON.stringify(window.__dbxCalls.map(c => c.url))`);
+  const oauthCalls = await evalJs(`(window.__dbxCalls || []).filter(c => c.url.endsWith('/oauth2/token')).length`);
+  check('dropbox oauth: token exchange called', oauthCalls >= 1);
+  const calls = await evalJs(`JSON.stringify(window.__dbxCalls.filter(c => c.url.includes('files/upload')).map(c => c.url))`);
   check('dropbox: upload called', calls.includes('files/upload'));
-  const argHdr = await evalJs(`window.__dbxCalls[0].headers['Dropbox-API-Arg'] || ''`);
+  const upCall = await evalJs(`(window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0]`);
+  const argHdr = await evalJs(`((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).headers?.['Dropbox-API-Arg'] || ''`);
   check('dropbox: overwrite mode', argHdr.includes('overwrite'));
-  const body = await evalJs(`window.__dbxCalls[0].body`);
+  const body = await evalJs(`((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).body || ''`);
   check('dropbox: body has groups', body.includes('"groups"'));
 
   // 7. Dropbox restore
@@ -410,6 +411,43 @@ async function main() {
 
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;
+  // pkt 53: ikona refresh miniatur jako SVG zamiast emoji
+  check('pkt53: thumb-group icon is inline SVG', await evalJs(`(() => {
+    const b = document.querySelector('.thumb-group');
+    return !!(b && b.querySelector('svg'));
+  })()`));
+
+  // pkt 54: OAuth — Connect flow, brak pola token, disconnect
+  check('pkt54: no manual token field, Connect/Disconnect present', await evalJs(`(() => {
+    return !document.querySelector('#f-dbx-token') && !!document.querySelector('#btn-dbx-connect') && !!document.querySelector('#btn-dbx-disconnect') && !!document.querySelector('#dbx-conn-state');
+  })()`));
+
+  check('pkt54: Connect runs OAuth flow (PKCE) and stores tokens', await evalJs(`(() => new Promise(res => {
+    document.querySelector('#btn-settings').click();
+    document.querySelector('[data-act=backup]').click();
+    document.querySelector('#btn-dbx-connect').click();
+    setTimeout(() => {
+      const auth = (window.__authFlows || [])[0];
+      const tok = (window.__dbxCalls || []).filter(c => c.url.endsWith('/oauth2/token'))[0];
+      const stored = window.__store;
+      res(!!(auth && auth.url.includes('code_challenge_method=S256') && auth.url.includes('token_access_type=offline')
+        && tok && String(tok.body).includes('testcode123')
+        && stored.dbxAccess === 'sl.testAccess' && stored.dbxRefresh === 'sl.testRefresh'
+        && document.querySelector('#dbx-conn-state').textContent === 'Connected'));
+    }, 300);
+  }))()`));
+
+  check('pkt54: refresh flow renews access token', await evalJs(`(() => new Promise(res => {
+    window.__store.dbxExpires = Date.now() - 1000; // wymuś wygaśnięcie
+    document.querySelector('#btn-dbx-restore').click();
+    setTimeout(() => {
+      const calls = (window.__dbxCalls || []).filter(c => c.url.endsWith('/oauth2/token'));
+      const refreshed = calls.some(c => String(c.body).includes('grant_type=refresh_token'));
+      res(refreshed && document.querySelector('#dbx-status').textContent.includes('Loaded from Dropbox'));
+    }, 300);
+  }))()`));
+
+
   console.log(`\n${results.length - fails}/${results.length} passed`);
   ws.close(); chrome.kill();
   process.exit(fails ? 1 : 0);
