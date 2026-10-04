@@ -30,6 +30,10 @@ App key to wartość publiczna — przy PKCE nie stanowi sekretu i nie musi być
 2. Znajdź pole **App key** (sekcja OAuth 2) i skopiuj wartość — to krótki ciąg
    małych liter/cyfr (~15–26 znaków). **Nie myl z „App secret"** (64 znaki) —
    wklejenie secretu daje błąd Dropboxa „Invalid client_id: Too long".
+3. W tej samej sekcji OAuth 2, w polu **Redirect URIs**, kliknij **Add** i wklej:
+   `https://ldgbieeolhlhaodogakabgdhjadcmedn.chromiumapp.org/`
+   (adres z ID zainstalowanego rozszerzenia; końcowy `/` jest wymagany).
+   Bez tego Dropbox zwraca „Invalid redirect_uri".
 
 ## 4. Podłącz rozszerzenie
 
