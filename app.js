@@ -689,11 +689,12 @@ async function dbxPush(silent = false) {
   if (!token) { if (!silent) $('#dbx-status').textContent = '\u2717 Not connected'; return; }
   dbxState.busy = true;
   try {
-    const payload = JSON.stringify({ groups: state.groups, savedAt: new Date().toISOString() }, null, 2);
+    const payload = new TextEncoder().encode(JSON.stringify({ groups: state.groups, savedAt: new Date().toISOString() }, null, 2));
     const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/octet-stream',
         'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH, mode: 'overwrite', mute: true }),
       },
       body: payload,
