@@ -24,7 +24,7 @@ const state = {
   view: { mode: 'all', activeId: null, pages: {} },
   layout: { ...LAYOUT_DEFAULTS },
 };
-const uid = () => Math.random().toString(36).slice(2, 10);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10));
 const $ = (s) => document.querySelector(s);
 
 const board = $('#board');
@@ -767,7 +767,7 @@ function exportJson() {
   // pkt 47: nazwa pliku z datą YY-MM-DD i czasem HH-MM (dwukropek nielegalny w nazwach plików)
   const d = new Date();
   const pad = n => String(n).padStart(2, '0');
-  a.download = `speed-dial-backup_${pad(d.getFullYear() % 100)}:${pad(d.getMonth() + 1)}:${pad(d.getDate())}_${pad(d.getHours())}:${pad(d.getMinutes())}.json`;
+  a.download = `speed-dial-backup_${pad(d.getFullYear() % 100)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
