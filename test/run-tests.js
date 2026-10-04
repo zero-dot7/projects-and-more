@@ -100,7 +100,13 @@ async function main() {
     openBackupDialog();
     document.querySelector('#btn-dbx-connect').click();
   `);
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 900));
+  if (process.env.DBX_DEBUG) {
+    console.log('DBG status:', await evalJs(`document.querySelector('#dbx-status').textContent`));
+    console.log('DBG calls:', await evalJs(`(window.__dbxCalls||[]).map(c=>c.url).join(' | ') || 'NONE'`));
+    console.log('DBG flows:', await evalJs(`JSON.stringify(window.__authFlows||[])`));
+    console.log('DBG authing:', await evalJs(`typeof dbxState !== 'undefined' ? dbxState.authing : 'n/a'`));
+  }
   const oauthCalls = await evalJs(`(window.__dbxCalls || []).filter(c => c.url.endsWith('/oauth2/token')).length`);
   check('dropbox oauth: token exchange called', oauthCalls >= 1);
   const calls = await evalJs(`JSON.stringify(window.__dbxCalls.filter(c => c.url.includes('files/upload')).map(c => c.url))`);
@@ -116,7 +122,7 @@ async function main() {
     openBackupDialog();
     document.querySelector('#btn-dbx-restore').click();
   `);
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 900));
   const restoredName = await evalJs(`window.__store.groups[0].name`);
   check('dropbox restore: group from mock', restoredName === 'Z Dropboxa');
   const status = await evalJs(`document.querySelector('#dbx-status').textContent`);
