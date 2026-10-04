@@ -53,7 +53,7 @@ async function main() {
   let tiles = await evalJs(`document.querySelectorAll('.tile').length`);
   check('render: 6 default tiles', tiles === 6);
   let stats = await evalJs(`document.querySelector('#stats').textContent`);
-  check('stats text', /6 kafelków w 2 grupach/.test(stats));
+  check('stats text', /6 tiles in 2 groups/.test(stats));
 
   // 2. add group via dialog logic (call openGroupDialog + fill + ok)
   await evalJs(`
@@ -162,7 +162,7 @@ async function main() {
   check('gsd import: dial name trimmed', g.groups[0]?.tiles[0]?.title === 'Wiki');
   check('gsd import: empty + non-http dials skipped', g.groups[0]?.tiles.length === 1);
   check('gsd import: thumbnail matched to tile', g.groups[0]?.tiles[0]?.thumb === 'data:image/png;base64,AAA');
-  check('gsd import: confirm shows counts', /2 grup.*2 kafelk/.test(g.confirm));
+  check('gsd import: confirm shows counts', /2 groups, 2 tiles/.test(g.confirm));
 
   // 11. GSD import end-to-end na REALNYM backupie (fetch z serwera testowego)
   await evalJs(`(async () => {
@@ -200,7 +200,7 @@ async function main() {
   check('tabs: mode switched to tabs', mode === 'tabs');
   check('tabs: body has view-tabs class', await evalJs(`document.body.classList.contains('view-tabs')`) === true);
   let tabCount = await evalJs(`document.querySelectorAll('.tab').length`);
-  check('tabs: one tab per group (19+TopSites)', tabCount === 20);
+  check('tabs: one tab per group', tabCount === 19);
   let activeTabs = await evalJs(`document.querySelectorAll('.tab.active').length`);
   check('tabs: exactly one active', activeTabs === 1);
   let visibleGroups = await evalJs(`document.querySelectorAll('.group').length`);
@@ -235,7 +235,7 @@ async function main() {
 
   // middle-click closes (pkt 12: ✕ removed; close via middle-click)
   await evalJs(`(() => {
-    const t = document.querySelectorAll('.tab')[1]; // [0] = Top Sites (pkt 24, nieusuwalna)
+    const t = document.querySelectorAll('.tab')[0];
     t.dispatchEvent(new MouseEvent('auxclick', { button: 1, bubbles: true }));
   })()`);
   await new Promise(r => setTimeout(r, 200));
@@ -301,7 +301,7 @@ async function main() {
     document.querySelector('#settings-menu [data-act="view"]').click();
   `);
   await new Promise(r => setTimeout(r, 300));
-  check('tabs: back to all mode renders all groups', await evalJs(`document.querySelectorAll('.group').length`) === 18); // 17 (po middle-click) + Top Sites (pkt 24)
+  check('tabs: back to all mode renders all groups', await evalJs(`document.querySelectorAll('.group').length`) === 18); // po middle-click (19 - 1)
 
   // 13. Pagination + layout dialog (pkt 7–8)
   await evalJs(`(async () => {
@@ -374,46 +374,6 @@ async function main() {
 
   // 23: pogrubiona nazwa grupy
   check('pkt23: h2 font-weight ≥ 700', parseInt(await evalJs(`getComputedStyle(document.querySelector('.group-head h2')).fontWeight`)) >= 700);
-
-  // 24: zakładka „Najczęściej odwiedzane" (chrome.topSites) w trybie zakładek
-  await evalJs(`(() => { state.topSites = true; state.view.mode = 'tabs'; state.view.activeId = TOP_SITES_ID; render(); })()`);
-  check('pkt24: zakładka top sites istnieje', await evalJs(`(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.id === '__top_sites__'); return !!t; })()`) === true);
-  check('pkt24: kafelki z chrome.topSites widoczne', parseInt(await evalJs(`document.querySelectorAll('.group[data-id="__top_sites__"] .tile').length`)) >= 3);
-  check('pkt24: top sites bez przycisku usuń', await evalJs(`(() => { const g = document.querySelector('.group[data-id="__top_sites__"]'); return g.querySelector('.del-group').onclick === null; })()`) === true);
-
-  // 25: przełącznik ON/OFF w menu
-  check('pkt25: menu pokazuje „wł.”', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wł.'));
-  await evalJs(`(() => { state.topSites = false; syncTopSitesMenu(); render(); })()`);
-  check('pkt25: wyłączenie usuwa zakładkę', await evalJs(`(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.id === '__top_sites__'); return !t; })()`) === true);
-  check('pkt25: menu pokazuje „wył.”', (await evalJs(`document.getElementById('topsites-label').textContent`)).includes('wył.'));
-  await evalJs(`(() => { state.topSites = true; syncTopSitesMenu(); render(); })()`);
-
-  // 27: licznik kliknięć + ukrywanie w top sites
-  await evalJs(`(() => { state.view.mode = 'tabs'; state.view.activeId = TOP_SITES_ID; render(); })()`);
-  const topUrls = JSON.parse(await evalJs(`JSON.stringify(state.topTiles.map(t => t.url))`));
-  check('pkt27: top sites ma kafelki', topUrls.length >= 3);
-  // klik w kafelek → licznik +1, zapis do storage, reordering (preventDefault — test nie nawiguje)
-  const clickTile = `(() => { const a = document.querySelector('.group[data-id="__top_sites__"] .tile'); const stop = e => e.preventDefault(); window.addEventListener('click', stop, true); a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); window.removeEventListener('click', stop, true); })()`;
-  await evalJs(clickTile);
-  await new Promise(r => setTimeout(r, 200));
-  const clicksAfter = JSON.parse(await evalJs(`JSON.stringify(state.topStats.clicks)`));
-  check('pkt27: klik zapisany w state.topStats', clicksAfter[topUrls[0]] === 1);
-  check('pkt27: licznik zapisany do storage', JSON.parse(await evalJs(`JSON.stringify(window.__store.topSitesStats || {})`)).clicks[topUrls[0]] === 1);
-  check('pkt27: kliknięta strona na miejscu 1', await evalJs(`state.topTiles[0].url`) === topUrls[0]);
-  check('pkt27: badge licznika w DOM', await evalJs(`document.querySelector('.group[data-id="__top_sites__"] .top-clicks').textContent`) === '1');
-  // drugi klik na tę samą stronę → 2
-  await evalJs(clickTile);
-  await new Promise(r => setTimeout(r, 200));
-  check('pkt27: drugi klik → licznik 2', await evalJs(`state.topStats.clicks[${JSON.stringify(topUrls[0])}]`) === 2);
-  // ✕ ukrywa stronę z sekcji (i wskakuje kolejna z listy Brave)
-  await evalJs(`(() => { document.querySelector('.group[data-id="__top_sites__"] .tile .del-tile').click(); })()`);
-  check('pkt27: ✕ ukrywa stronę', await evalJs(`(() => { const h = state.topStats.hidden; return h.includes(${JSON.stringify(topUrls[0])}) && !state.topTiles.some(t => t.url === ${JSON.stringify(topUrls[0])}); })()`) === true);
-  check('pkt27: ukryta strona zapisana w storage', JSON.parse(await evalJs(`JSON.stringify(window.__store.topSitesStats || {})`)).hidden.includes(topUrls[0]));
-  check('pkt27: po ukryciu sekcja nadal pokazuje 10 (pełna lista Brave)', await evalJs(`document.querySelectorAll('.group[data-id="__top_sites__"] .tile').length`) === 10);
-  // reset z menu ⚙ kasuje licznik i ukryte
-  await evalJs(`(() => { document.getElementById('btn-settings').click(); document.querySelector('#settings-menu [data-act="topreset"]').click(); })()`);
-  check('pkt27: reset czyści clicks i hidden', await evalJs(`(() => { const s = window.__store.topSitesStats; return s && Object.keys(s.clicks).length === 0 && s.hidden.length === 0 && state.topTiles.some(t => t.url === ${JSON.stringify(topUrls[0])}); })()`) === true);
-
 
   // 26: miniaturki — przycisk 🖼, kolejka max 2 równoległe, capture + persist + cleanup
   await evalJs(`(() => { state.view.mode = 'all'; render(); })()`); // w tabs widoczna tylko aktywna grupa

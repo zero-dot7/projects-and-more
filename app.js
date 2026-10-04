@@ -18,131 +18,11 @@ const DEFAULTS = {
 
 const LAYOUT_DEFAULTS = { cols: 6, rows: 4, paginate: true };
 
-/* pkt 37: i18n PL/ENG — słownik + t() + applyLang(); domyślnie PL */
-const I18N = {
-  pl: {
-    'search.ph': 'Szukaj wśród kafelków…',
-    'menu.settings': 'Ustawienia', 'menu.view': 'Widok', 'menu.lang': 'Język',
-    'menu.thumbnails': 'Miniatury', 'menu.topsites': 'Najczęściej odwiedzane',
-    'label.topsites': 'Najczęściej odwiedzane', 'label.bookmarks': 'Zakładki',
-    'btn.newGroup': 'Nowa grupa', 'btn.addTile': 'Dodaj kafelek',
-    'btn.cancel': 'Anuluj', 'btn.save': 'Zapisz', 'btn.delete': 'Usuń',
-    'dlg.tileTitle': 'Kafelek', 'dlg.groupTitle': 'Grupa',
-    'dlg.dbxTitle': 'Dropbox – backup', 'dlg.dbxStatus': 'Status: ',
-    'dlg.dbxConnect': 'Połącz z Dropboxem', 'dlg.dbxToken': 'Token OAuth (opcjonalnie)',
-    'dlg.dbxDownload': 'Pobierz backup', 'dlg.dbxUpload': 'Wyślij backup',
-    'dlg.dbxBackups': 'Backupów na Dropboxie: ',
-    'dlg.dbxDownloadok': 'Pobrano backup.',
-    'dlg.dbxDownloadempty': 'Brak backupu na Dropboxie.',
-    'dlg.dbxUploadok': 'Backup wysłany.',
-    'dlg.dbxBackupsok': 'Backupów na Dropboxie: ',
-    'stat.tiles': 'kafelków w', 'stat.groups': 'grupach',
-    'stat.thumbs': 'miniatur', 'stat.thumbErrors': 'błędów miniatur',
-    'stat.thumbsPending': 'w kolejce',
-    'stat.none': 'Brak kafelków', 'stat.noneGroup': 'Brak kafelków w grupie',
-    'groups.saved': 'Zapisane zakładki', 'groups.history': 'Historia',
-    'groups.downloads': 'Pobrane',
-    'tile.edit': 'Edytuj kafelek', 'tile.delete': 'Usuń kafelek',
-    'confirm.deleteTile': 'Usunąć kafelek?', 'confirm.deleteGroup': 'Usunąć grupę?',
-    'toast.saved': 'Zapisano.', 'toast.deleted': 'Usunięto.',
-    'toast.thumbError': 'Nie udało się zrobić miniatury: ',
-    'toast.dbxOk': 'Gotowe.', 'toast.dbxErr': 'Błąd: ',
-    'import.tooBig': 'Plik zbyt duży (limit 50 MB).',
-    'import.done': 'Zaimportowano {groups} grup / {tiles} kafelków — zapisano.',
-    'import.error': 'Błąd importu: ',
-    'lbl.title': 'Tytuł', 'lbl.rowsLong': 'Liczba rzędów',
-    'lbl.dbxTokenLong': 'Token dostępowy (OAuth2 Dropbox, scope files.content.write + files.content.read)',
-    'hint.dbxAuto': 'Auto-backup przy każdej zmianie (co najmniej raz na 5 min)',
-    'hint.paginate': 'Podziel na strony, gdy kafelków > cols × rzędy',
-    'dlg.backup': '☁ Backup Dropbox', 'dlg.importTitle': 'Import backup',
-    'btn.dbxRestore': 'Wczytaj z Dropbox', 'btn.dbxSave': 'Zapisz ustawienia',
-    'btn.importDo': 'Importuj',
-    'toast.layout': 'Układ: {c} × {r}',
-    'import.confirm': 'Zaimportować {groups} grup / {tiles} kafelków? Obecna zawartość zostanie zastąpiona.',
-    'dlg.editGroup': 'Edytuj grupę', 'dlg.newGroup': 'Nowa grupa',
-    'dlg.layout': '▦ Układ kafelków', 'label.viewTabs': 'Zakładki grup',
-    'badge.clicks': 'kliknięć w speed dialu',
-    'common.on': 'wł.', 'common.off': 'wył.', 'common.pages': 'strony',
-    'theme.day': 'Tryb dzienny', 'theme.night': 'Tryb nocny',
-    'label.topsites': 'Najczęściej odwiedzane', 'label.viewAll': 'Zakładki: wszystkie',
-    'lang.self': 'Język: polski',
-    'confirm.deleteGroupFull': 'Usunąć grupę „{name}” wraz z kafelkami?',
-    'stat.emptyHint': 'Brak wyników / dodaj grupę i kafelki (+ Grupa).',
-  },
-  en: {
-    'search.ph': 'Search tiles…',
-    'menu.settings': 'Settings', 'menu.view': 'View', 'menu.lang': 'Language',
-    'menu.thumbnails': 'Thumbnails', 'menu.topsites': 'Most visited',
-    'label.topsites': 'Most visited', 'label.bookmarks': 'Bookmarks',
-    'btn.newGroup': 'New group', 'btn.addTile': 'Add tile',
-    'btn.cancel': 'Cancel', 'btn.save': 'Save', 'btn.delete': 'Delete',
-    'dlg.tileTitle': 'Tile', 'dlg.groupTitle': 'Group',
-    'dlg.dbxTitle': 'Dropbox – backup', 'dlg.dbxStatus': 'Status: ',
-    'dlg.dbxConnect': 'Connect to Dropbox', 'dlg.dbxToken': 'OAuth token (optional)',
-    'dlg.dbxDownload': 'Download backup', 'dlg.dbxUpload': 'Send backup',
-    'dlg.dbxBackups': 'Backups on Dropbox: ',
-    'dlg.dbxDownloadok': 'Backup downloaded.',
-    'dlg.dbxDownloadempty': 'No backup on Dropbox.',
-    'dlg.dbxUploadok': 'Backup sent.',
-    'dlg.dbxBackupsok': 'Backups on Dropbox: ',
-    'stat.tiles': 'tiles in', 'stat.groups': 'groups',
-    'stat.thumbs': 'thumbnails', 'stat.thumbErrors': 'thumb errors',
-    'stat.thumbsPending': 'queued',
-    'stat.none': 'No tiles', 'stat.noneGroup': 'No tiles in group',
-    'groups.saved': 'Saved bookmarks', 'groups.history': 'History',
-    'groups.downloads': 'Downloads',
-    'tile.edit': 'Edit tile', 'tile.delete': 'Delete tile',
-    'confirm.deleteTile': 'Delete tile?', 'confirm.deleteGroup': 'Delete group?',
-    'toast.saved': 'Saved.', 'toast.deleted': 'Deleted.',
-    'toast.thumbError': 'Thumbnail failed: ',
-    'toast.dbxOk': 'Done.', 'toast.dbxErr': 'Error: ',
-    'stat.emptyHint': 'No results / add a group and tiles (+ Group).',
-    'confirm.deleteGroupFull': 'Delete group "{name}" with its tiles?',
-    'common.on': 'on', 'common.off': 'off', 'common.pages': 'pages',
-    'theme.day': 'Day mode', 'theme.night': 'Night mode',
-    'label.topsites': 'Most visited', 'label.viewAll': 'Bookmarks: all',
-    'lang.self': 'Language: English',
-    'badge.clicks': 'speed-dial clicks',
-    'dlg.editGroup': 'Edit group', 'dlg.newGroup': 'New group',
-    'dlg.layout': '▦ Tile layout', 'label.viewTabs': 'Group tabs',
-    'import.tooBig': 'File too large (50 MB limit).',
-    'import.confirm': 'Import {groups} groups / {tiles} tiles? Current content will be replaced.',
-    'import.done': 'Imported {groups} groups / {tiles} tiles — saved.',
-    'import.error': 'Import error: ',
-    'lbl.title': 'Title', 'lbl.rowsLong': 'Number of rows',
-    'lbl.dbxTokenLong': 'Access token (OAuth2 Dropbox, scope files.content.write + files.content.read)',
-    'hint.dbxAuto': 'Auto-backup on every change (at least once per 5 min)',
-    'hint.paginate': 'Split into pages when tiles > cols × rows',
-    'dlg.backup': '☁ Dropbox Backup', 'dlg.importTitle': 'Backup Import',
-    'btn.dbxRestore': 'Load from Dropbox', 'btn.dbxSave': 'Save settings',
-    'btn.importDo': 'Import',
-    'toast.layout': 'Layout: {c} × {r}',
-  },
-};
-const tr = (k) => (I18N[state.lang] && I18N[state.lang][k]) || I18N.pl[k] || k;
-
-/* pkt 37: aplikuje tłumaczenia na elementy [data-i18n] + placeholder szukajki;
-   wywoływana po init i po zmianie języka; re-renderuje UI (render, dialogi, menu) */
-function applyLang() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    el.textContent = tr(el.dataset.i18n);
-  });
-  const q = $('#q');
-  if (q) q.placeholder = tr('search.ph');
-  const bl = $('#btn-lang');
-  if (bl) bl.textContent = state.lang === 'pl' ? 'EN' : 'PL';
-  const ll = $('#lang-label');
-  if (ll) ll.textContent = '🌐 ' + tr('lang.self');
-  applyTheme(); // odświeża label motywu w aktywnym języku
-}
-
 const state = {
   groups: [],
   filter: '',
   view: { mode: 'all', activeId: null, pages: {} },
   layout: { ...LAYOUT_DEFAULTS },
-  topSites: true, // pkt 24–25: pseudo-grupa „Najczęściej odwiedzane”
-  lang: 'pl', // pkt 37: 'pl' | 'en'
 };
 const uid = () => Math.random().toString(36).slice(2, 10);
 const $ = (s) => document.querySelector(s);
@@ -154,7 +34,7 @@ const tplTile = $('#tpl-tile');
 /* ---------- storage ---------- */
 
 async function load() {
-  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout', 'theme', 'topSites', 'lang']);
+  const data = await chrome.storage.local.get(['groups', 'viewMode', 'layout', 'theme']);
   state.groups = Array.isArray(data.groups) && data.groups.length
     ? data.groups
     : structuredClone(DEFAULTS.groups);
@@ -171,11 +51,7 @@ async function load() {
     };
   }
   state.theme = data.theme === 'day' ? 'day' : 'night';
-  state.lang = data.lang === 'en' ? 'en' : 'pl'; // pkt 37: domyślnie PL
-  state.topSites = data.topSites !== false; // pkt 25: domyślnie włączone
-  state.topStats = data.topSitesStats || { clicks: {}, hidden: [] }; // pkt 27: licznik + ukryte
   applyTheme();
-  applyLang(); // pkt 37: statyczne labelki + placeholder szukajki
 }
 
 function clampInt(v, min, max, dflt) {
@@ -235,8 +111,8 @@ async function makeThumb(tile, groupId) {
   const win = await chrome.windows.create({
     url: tile.url,
     type: 'popup',
-    left: 0,
-    top: 0,
+    left: 3000,
+    top: 3000,
     width: 1280,
     height: 800,
     focused: false,
@@ -307,63 +183,8 @@ function filteredGroups() {
 
 /* ---------- rendering ---------- */
 
-const TOP_SITES_ID = '__top_sites__'; // pkt 24: pseudo-grupa z chrome.topSites
-
-async function fetchTopSites() {
-  try {
-    const sites = await chrome.topSites.get();
-    state._topAll = (sites || []).map(s => ({ // pełna lista, bez cięcia
-      title: s.title || new URL(s.url).hostname,
-      url: s.url,
-    }));
-    return applyTopStats(state._topAll);
-  } catch { return []; }
-}
-
-/* pkt 27: własny ranking — ukryte odpadają, kliknięte lecą wyżej (stabilnie),
-   zdalna kolejność Brave zostaje dla remisów; pokazujemy top 10 */
-function applyTopStats(list) {
-  const { clicks = {}, hidden = [] } = state.topStats || {};
-  return list
-    .filter(t => !hidden.includes(t.url))
-    .sort((a, b) => (clicks[b.url] || 0) - (clicks[a.url] || 0))
-    .slice(0, 10)
-    .map(t => ({ ...t, clicks: clicks[t.url] || 0 }));
-}
-
-function bumpTopSite(url) { // pkt 27: klik w kafelek top sites
-  if (!url) return;
-  state.topStats.clicks[url] = (state.topStats.clicks[url] || 0) + 1;
-  chrome.storage.local.set({ topSitesStats: state.topStats });
-  state.topTiles = applyTopStats(state._topAll || []);
-  const badge = document.querySelector(`.group[data-id="${TOP_SITES_ID}"] .tile[data-url="${CSS.escape(url)}"] .top-clicks`); // aktualizacja badge bez pełnego re-renderu
-  if (badge) badge.textContent = state.topStats.clicks[url];
-}
-
-function hideTopSite(url) { // pkt 27: ✕ ukrywa stronę z sekcji (do resetu w menu)
-  if (!state.topStats.hidden.includes(url)) state.topStats.hidden.push(url);
-  chrome.storage.local.set({ topSitesStats: state.topStats });
-  state.topTiles = applyTopStats(state._topAll || []);
-  render();
-}
-
-function resetTopStats() { // pkt 27: „↺ Reset" w menu ⚙ — kasuje licznik i ukryte
-  state.topStats = { clicks: {}, hidden: [] };
-  chrome.storage.local.set({ topSitesStats: state.topStats });
-  state.topTiles = applyTopStats(state._topAll || []);
-  render();
-}
-
-function tabGroups() {
-  if (!state.topSites || !chrome.topSites) return state.groups; // pkt 25: wyłączone lub brak API
-  return [{ id: TOP_SITES_ID, name: '★ ' + tr('label.topsites'), color: 'var(--accent)', tiles: state.topTiles || [], fixed: true }, ...state.groups]; // pkt 24: zawsze pierwsza od lewej
-}
-
 function visibleGroups() {
   if (state.view.mode === 'tabs' && !state.filter) {
-    if (state.view.activeId === TOP_SITES_ID) {
-      return [{ id: TOP_SITES_ID, name: '★ ' + tr('label.topsites'), color: 'var(--accent)', tiles: state.topTiles || [], fixed: true }];
-    }
     const g = filteredGroups().find(g => g.id === state.view.activeId);
     return g ? [g] : [];
   }
@@ -375,24 +196,24 @@ function render() {
   if (state.view.mode === 'tabs') renderTabBar();
   const groups = visibleGroups();
   if (!groups.length) {
-    board.innerHTML = '<div class="empty-hint">' + tr('stat.emptyHint') + '</div>';
+    board.innerHTML = '<div class="empty-hint">No results / add a group and tiles (+ Group).</div>';
     return;
   }
   for (const g of groups) board.appendChild(renderGroup(g));
-  $('#stats').textContent = `${state.groups.reduce((n, g) => n + g.tiles.length, 0)} ${tr('stat.tiles')} ${state.groups.length} ${tr('stat.groups')}`;
+  $('#stats').textContent = `${state.groups.reduce((n, g) => n + g.tiles.length, 0)} tiles in ${state.groups.length} groups`;
   // pkt 36: licznik miniatur w prawym dolnym rogu
   const tAll = state.groups.reduce((n, g) => n + g.tiles.length, 0);
   const tThumb = state.groups.reduce((n, g) => n + g.tiles.filter(t => t.thumb).length, 0);
   const tErr = state.groups.reduce((n, g) => n + g.tiles.filter(t => t.thumbError).length, 0);
   const span = $('#thumb-stats');
-  if (span) span.textContent = tErr ? `${tr('menu.thumbnails')}: ${tThumb}/${tAll} (${tr('stat.thumbErrors')}: ${tErr})` : `${tr('menu.thumbnails')}: ${tThumb}/${tAll}`;
+  if (span) span.textContent = tErr ? `Thumbnails: ${tThumb}/${tAll} (errors: ${tErr})` : `Thumbnails: ${tThumb}/${tAll}`;
 }
 
 function renderTabBar() {
   const bar = document.createElement('div');
   bar.className = 'tab-bar';
   bar.hidden = !!state.filter; // podczas szukania pokaż wszystkie dopasowania, bez kart
-  const groups = tabGroups(); // pkt 24: zwykłe grupy + opcjonalna zakładka Top Sites
+  const groups = state.groups;
   for (const g of groups) {
     const tab = document.createElement('div');
     tab.className = 'tab' + (g.id === state.view.activeId ? ' active' : '');
@@ -408,7 +229,7 @@ function renderTabBar() {
     tab.append(lbl, cnt);
     tab.onclick = () => selectTab(g.id);
     tab.onauxclick = (e) => { // middle-click closes, jak w przeglądarce
-      if (e.button === 1 && g.id !== TOP_SITES_ID) { e.preventDefault(); removeGroup(g.id); }
+      if (e.button === 1) { e.preventDefault(); removeGroup(g.id); }
     };
     bar.appendChild(tab);
     // drag to reorder tabs
@@ -442,13 +263,13 @@ function removeGroup(id) {
   const idx = state.groups.findIndex(x => x.id === id);
   if (idx === -1) return;
   const g = state.groups[idx];
-  if (!confirm(tr('confirm.deleteGroupFull').replace('{name}', g.name))) return;
+  if (!confirm('Delete group "{name}" with its tiles?'.replace('{name}', g.name))) return;
   state.groups.splice(idx, 1);
   if (state.view.activeId === id) {
     // jak karty w przeglądarce: aktywna staje się sąsiednia (następna, w braku poprzedniej)
     state.view.activeId = state.groups[Math.min(idx, state.groups.length - 1)]?.id ?? null;
   }
-  if (modeIsTabs() && !state.view.activeId && state.groups.length) state.view.activeId = tabGroups()[0].id; // pkt 24: pierwsza od lewej (może być Top Sites)
+  if (modeIsTabs() && !state.view.activeId && state.groups.length) state.view.activeId = state.groups[0].id;
   save(); render();
 }
 
@@ -465,8 +286,7 @@ const modeIsTabs = () => state.view.mode === 'tabs';
 
 function applyViewMode() {
   document.body.classList.toggle('view-tabs', modeIsTabs());
-  if (modeIsTabs() && !state.groups.some(g => g.id === state.view.activeId)
-      && state.view.activeId !== TOP_SITES_ID) { // pkt 24: zakładka Top Sites też może być aktywna
+  if (modeIsTabs() && !state.groups.some(g => g.id === state.view.activeId)) {
     state.view.activeId = state.groups[0]?.id ?? null;
   }
   render();
@@ -481,19 +301,14 @@ function toggleViewMode() {
 
 function syncViewMenu() {
   const lbl = $('#view-label');
-  if (lbl) lbl.textContent = (modeIsTabs() ? '✓ ' : '') + tr('label.bookmarks');
-}
-
-function syncTopSitesMenu() { // pkt 25
-  const lbl = $('#topsites-label');
-  if (lbl) lbl.textContent = '★ ' + tr('label.topsites') + ': ' + (state.topSites ? tr('common.on') : tr('common.off'));
+  if (lbl) lbl.textContent = (modeIsTabs() ? '✓ ' : '') + 'Group tabs';
 }
 
 /* pkt 14: motyw dzień/noc */
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
   const lbl = $('#theme-label');
-  if (lbl) lbl.textContent = state.theme === 'day' ? '☾ ' + tr('theme.night') : '☀ ' + tr('theme.day'); // pkt 37
+  if (lbl) lbl.textContent = state.theme === 'day' ? '☾ ' + 'Night mode' : '☀ ' + 'Day mode'; // pkt 37
 }
 
 function toggleTheme() {
@@ -529,11 +344,10 @@ function renderGroup(g) {
   };
   h2.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); h2.blur(); } };
 
-  const fixed = !!g.fixed; // pkt 24: „Najczęściej odwiedzane" — bez edycji/usuwania
-  el.querySelector('.add-tile').onclick = fixed ? null : () => openTileDialog(null, g.id);
-  el.querySelector('.thumb-group').onclick = fixed ? null : () => enqueueThumbs(g.tiles, g.id); // pkt 26
-  el.querySelector('.edit-group').onclick = fixed ? null : () => openGroupDialog(g);
-  el.querySelector('.del-group').onclick = fixed ? null : () => removeGroup(g.id);
+  el.querySelector('.add-tile').onclick = () => openTileDialog(null, g.id);
+  el.querySelector('.thumb-group').onclick = () => enqueueThumbs(g.tiles, g.id); // pkt 26
+  el.querySelector('.edit-group').onclick = () => openGroupDialog(g);
+  el.querySelector('.del-group').onclick = () => removeGroup(g.id);
 
   const tilesEl = el.querySelector('.tiles');
   // pkt 7–8: układ cols × rows z paginacją; kafelki wypełniają szerokość (1fr)
@@ -579,18 +393,6 @@ function renderTile(t, g) {
   a.querySelector('.t-title').textContent = t.title;
   a.querySelector('.t-host').textContent = hostOf(t.url);
 
-  const isTop = g.id === TOP_SITES_ID; // pkt 27
-  if (isTop) {
-    a.classList.add('top-tile');
-    a.dataset.url = t.url; // pkt 27: cel dla aktualizacji badge bez re-renderu
-    a.addEventListener('click', () => bumpTopSite(t.url), true); // pkt 27: policz klik (capture, przed nawigacją)
-    const badge = document.createElement('span');
-    badge.className = 'top-clicks';
-    badge.textContent = t.clicks ? String(t.clicks) : '';
-    badge.title = tr('badge.clicks');
-    a.appendChild(badge);
-  }
-
   const img = a.querySelector('.fav');
   const letter = a.querySelector('.letter');
   if (t.thumb) {
@@ -611,7 +413,6 @@ function renderTile(t, g) {
   a.querySelector('.edit-tile').onclick = (e) => { e.preventDefault(); e.stopPropagation(); openTileDialog(t, g.id); };
   a.querySelector('.del-tile').onclick = (e) => {
     e.preventDefault(); e.stopPropagation();
-    if (isTop) { hideTopSite(t.url); return; } // pkt 27: w top sites ✕ = ukryj z sekcji
     g.tiles = g.tiles.filter(x => x.id !== t.id);
     save(); render();
   };
@@ -678,7 +479,7 @@ function enableGroupDrop(tilesEl, g) {
 
 function openTileDialog(tile, groupId) {
   const dlg = $('#dlg');
-  $('#dlg-title').textContent = tile ? 'Edytuj kafelek' : 'Dodaj kafelek';
+  $('#dlg-title').textContent = tile ? 'Edit tile' : 'Add tile';
   $('#f-title').value = tile ? tile.title : '';
   $('#f-url').value = tile ? tile.url : '';
   const sel = $('#f-group');
@@ -718,7 +519,7 @@ function openTileDialog(tile, groupId) {
 
 function openGroupDialog(group) {
   const dlg = $('#dlg-group');
-  $('#dlg-group-title').textContent = group ? tr('dlg.editGroup') : tr('dlg.newGroup');
+  $('#dlg-group-title').textContent = group ? 'Edit group' : 'New group';
   $('#f-group-name').value = group ? group.name : '';
   let color = group ? group.color : 'var(--accent)';
   const picker = $('#color-picker');
@@ -801,7 +602,7 @@ async function dbxPush(silent = false) {
       throw new Error('Dropbox: ' + msg);
     }
     dbxState.lastPush = Date.now();
-    if (!silent) $('#dbx-status').textContent = '✓ Zapisano na Dropbox (' + new Date().toLocaleTimeString('pl-PL') + ')';
+    if (!silent) $('#dbx-status').textContent = '✓ Saved to Dropbox (' + new Date().toLocaleTimeString() + ')';
   } catch (e) {
     if (!silent) $('#dbx-status').textContent = '✗ ' + e.message;
     else console.warn(e);
@@ -811,8 +612,8 @@ async function dbxPush(silent = false) {
 }
 
 async function dbxRestore() {
-  if (!dbxState.token) { alert('Najpierw podaj token.'); return; }
-  $('#dbx-status').textContent = 'Pobieram…';
+  if (!dbxState.token) { alert('Enter a token first.'); return; }
+  $('#dbx-status').textContent = 'Loading…';
   try {
     const res = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
@@ -827,7 +628,7 @@ async function dbxRestore() {
     state.groups = sanitizeGroups(data.groups);
     await save();
     render();
-    $('#dbx-status').textContent = '✓ Wczytano z Dropbox (' + data.savedAt + ')';
+    $('#dbx-status').textContent = '✓ Loaded from Dropbox (' + data.savedAt + ')';
   } catch (e) {
     $('#dbx-status').textContent = '✗ ' + e.message;
   }
@@ -867,7 +668,7 @@ function exportJson() {
 
 /* Format oryginalnego Group Speed Dial: dataVersion/groups[].dials[]/___thumbnails[] */
 function convertGsd(data) {
-  if (!Array.isArray(data.groups)) throw new Error('bad format: brak groups');
+  if (!Array.isArray(data.groups)) throw new Error('bad format: no groups');
   const thumbs = {};
   if (Array.isArray(data.___thumbnails)) {
     for (const t of data.___thumbnails) if (t.url && t.img) thumbs[t.url] = t.img;
@@ -877,7 +678,7 @@ function convertGsd(data) {
     .filter(g => g && !g.archived && Array.isArray(g.dials))
     .map((g, i) => ({
       id: uid(),
-      name: (g.name || `Grupa ${i + 1}`).trim(),
+      name: (g.name || `Group ${i + 1}`).trim(),
       color: PALETTE[i % PALETTE.length],
       open: true,
       tiles: g.dials
@@ -921,12 +722,12 @@ function sanitizeGroups(raw) {
       })),
     });
   }
-  if (!out.length) throw new Error('brak poprawnych grup w pliku');
+  if (!out.length) throw new Error('no valid groups in file');
   return out;
 }
 
 function importJson(file) {
-  if (file.size > 50 * 1024 * 1024) { alert(tr('import.tooBig')); return; }
+  if (file.size > 50 * 1024 * 1024) { alert('File too large (50 MB limit).'); return; }
   file.text().then(async txt => {
     const data = JSON.parse(txt);
     let groups;
@@ -935,20 +736,20 @@ function importJson(file) {
     } else if (Array.isArray(data.groups)) {
       groups = sanitizeGroups(data.groups); // nasz format
     } else {
-      throw new Error('nieznany format');
+      throw new Error('unknown format');
     }
     const tileCount = groups.reduce((n, g) => n + g.tiles.length, 0);
     const ok = await confirmDlg(
       'Import backup',
-      tr('import.confirm').replace('{groups}', groups.length).replace('{tiles}', tileCount)
+      'Import {groups} groups, {tiles} tiles? Current content will be replaced.'.replace('{groups}', groups.length).replace('{tiles}', tileCount)
     );
     if (!ok) return;
     state.groups = groups;
     if (modeIsTabs()) state.view.activeId = groups[0]?.id ?? null;
     await save();
     render();
-    toast(tr('import.done').replace('{groups}', groups.length).replace('{tiles}', tileCount));
-  }).catch(err => alert(tr('import.error') + err.message));
+    toast('Imported {groups} groups, {tiles} tiles — saved.'.replace('{groups}', groups.length).replace('{tiles}', tileCount));
+  }).catch(err => alert('Import error: ' + err.message));
 }
 
 /* Własny confirm oparty o <dialog> — window.confirm bywa blokowane w MV3 new tab
@@ -987,11 +788,9 @@ function toast(msg, ms = 4000) {
 
 async function init() {
   await load();
-  state.topTiles = await fetchTopSites(); // pkt 24
   await dbxLoadSettings();
   applyViewMode();
   syncViewMenu();
-  syncTopSitesMenu();
 
   // settings menu (gear, bottom-left)
   $('#btn-new-group').onclick = () => openGroupDialog(null); // pkt 30: stały + w prawym górnym rogu
@@ -1011,21 +810,7 @@ async function init() {
     if (act === 'export') exportJson();
     if (act === 'backup') openBackupDialog();
     if (act === 'view') toggleViewMode();
-    if (act === 'topsites') { // pkt 25
-      state.topSites = !state.topSites;
-      chrome.storage.local.set({ topSites: state.topSites });
-      if (state.view.activeId === TOP_SITES_ID) state.view.activeId = state.groups[0]?.id ?? null;
-      syncTopSitesMenu();
-      render();
-    }
-    if (act === 'topreset') resetTopStats(); // pkt 27
     if (act === 'theme') toggleTheme();
-    if (act === 'lang') { // pkt 37: przełącznik PL/ENG
-      state.lang = state.lang === 'pl' ? 'en' : 'pl';
-      chrome.storage.local.set({ lang: state.lang });
-      applyLang();
-      render();
-    }
     if (act === 'layout') {
       fCols.value = state.layout.cols;
       fRows.value = state.layout.rows;
@@ -1052,7 +837,7 @@ async function init() {
     state.view.pages = {};
     await saveLayout();
     render();
-    toast(tr('toast.layout').replace('{c}', state.layout.cols).replace('{r}', state.layout.rows) + (state.layout.paginate ? ' + ' + tr('common.pages') : ''));
+    toast('Layout: {c} × {r}'.replace('{c}', state.layout.cols).replace('{r}', state.layout.rows) + (state.layout.paginate ? ' + ' + 'pages' : ''));
   };
 
   $('#file-import').onchange = (e) => {
