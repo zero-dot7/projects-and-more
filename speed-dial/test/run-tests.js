@@ -171,22 +171,22 @@ async function main() {
   check('gsd import: thumbnail matched to tile', g.groups[0]?.tiles[0]?.thumb === 'data:image/png;base64,AAA');
   check('gsd import: confirm shows counts', /2 groups, 2 tiles/.test(g.confirm));
 
-  // 11. GSD import end-to-end na REALNYM backupie (fetch z serwera testowego)
-  await evalJs(`(async () => {
-    const res = await fetch('/test/backup-real.group_speed_dial');
-    const txt = await res.text();
-    importJson(new File([txt], 'backup.group_speed_dial'));
+  // (fixture backup-real usunięty — prywatne dane) seed deterministyczny na testy widoków:
+  await evalJs(`(() => {
+    state.groups = Array.from({ length: 19 }, (_, i) => ({
+      id: 'seed' + i,
+      name: 'Seed ' + (i + 1),
+      color: '#46a758',
+      collapsed: false,
+      tiles: Array.from({ length: 2 }, (_, j) => ({
+        id: 'seed' + i + 't' + j,
+        title: 'T ' + i + '.' + j,
+        url: 'https://example.com/' + i + '/' + j,
+        thumb: ''
+      }))
+    }));
+    render();
   })()`);
-  await new Promise(r => setTimeout(r, 1500));
-  const real = await evalJs(`JSON.stringify({
-    groups: (window.__gsdImported||[]).map(g => ({ name: g.name, n: g.tiles.length })),
-    withThumb: (window.__gsdImported||[]).reduce((n,g)=>n+g.tiles.filter(t=>t.thumb).length,0),
-  })`);
-  const r = JSON.parse(real);
-  check('gsd real: 19 groups', r.groups.length === 19);
-  check('gsd real: 471 tiles', r.groups.reduce((n,g)=>n+g.n,0) === 471);
-  check('gsd real: 459 tiles with thumbnails (non-http skipped)', r.withThumb === 459);
-  check('gsd real: first group Toolsy', r.groups[0]?.name === 'Toolsy');
 
   // 12. Tabs view (Brave-style)
   await evalJs(`window.confirm = () => true;`);
