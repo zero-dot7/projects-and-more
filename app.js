@@ -632,7 +632,11 @@ async function dbxAuthorize() {
     });
     const u = new URL(redirect);
     const code = u.searchParams.get('code') || new URLSearchParams(u.hash.slice(1)).get('code');
-    if (!code) throw new Error('no code in redirect');
+    if (!code) {
+      const e = u.searchParams.get('error') || '';
+      const ed = u.searchParams.get('error_description') || '';
+      throw new Error(e ? ('auth: ' + e + (ed ? ' — ' + ed : '')) : 'no code in redirect');
+    }
     const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -640,7 +644,10 @@ async function dbxAuthorize() {
     });
     if (!res.ok) {
       if (res.status === 400) await chrome.storage.sync.remove('dbxAppKey'); // zły app key — pozwól wpisać ponownie
-      throw new Error('token exchange failed: ' + res.status);
+      const body = await res.text().catch(() => '');
+      let detail = '';
+      try { const j = JSON.parse(body); detail = j.error_description || j.error || ''; } catch { detail = body.slice(0, 140); }
+      throw new Error('token exchange ' + res.status + (detail ? ': ' + detail : ''));
     }
     const t = await res.json();
     await dbxSaveTokens(t.access_token, t.refresh_token, t.expires_in);
@@ -693,7 +700,7 @@ async function dbxPush(silent = false) {
     });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
-      try { const e = await res.json(); msg = e.error_summary || msg; } catch {}
+      try { const e = await res.json(); msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg; } catch { try { msg += ' — ' + (await res.text()).slice(0, 120); } catch {} }
       throw new Error('Dropbox: ' + msg);
     }
     dbxState.lastPush = Date.now();
@@ -717,7 +724,7 @@ async function dbxRestore() {
     });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
-      try { const e = await res.json(); msg = e.error_summary || msg; } catch {}
+      try { const e = await res.json(); msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg; } catch { try { msg += ' — ' + (await res.text()).slice(0, 120); } catch {} }
       throw new Error(msg);
     }
     const data = await res.json();
