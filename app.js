@@ -594,12 +594,24 @@ async function dbxGetAppKey() {
   return (o && o.dbxAppKey) || DBX_APP_KEY_FALLBACK || '';
 }
 
+function dbxValidAppKeyFmt(k) {
+  // Dropbox app key: krótki lowercase id (typ. 15–26 znaków). 64-znakowy secret / wklejony
+  // blok ustawień nie przejdzie — Dropbox zwraca wtedy "Invalid client_id: Too long".
+  return /^[a-z0-9_-]{5,50}$/.test(k);
+}
+
 async function dbxAuthorize() {
   if (dbxState.authing) return;
   let DBX_APP_KEY = await dbxGetAppKey();
+  if (DBX_APP_KEY && !dbxValidAppKeyFmt(DBX_APP_KEY)) {
+    // zły key zapisany wcześniej (np. app secret) — wyczyść i pozwól wpisać ponownie
+    await chrome.storage.sync.remove('dbxAppKey');
+    DBX_APP_KEY = '';
+  }
   if (!DBX_APP_KEY) {
     const k = ($('#dbx-appkey') && $('#dbx-appkey').value.trim()) || '';
     if (!k) { $('#dbx-status').textContent = '\u2717 Enter your Dropbox app key first (dropbox.com/developers/apps)'; return; }
+    if (!dbxValidAppKeyFmt(k)) { $('#dbx-status').textContent = '\u2717 That does not look like an app key \u2014 copy the short "App key" from Settings (not the 64-char App secret)'; return; }
     await chrome.storage.sync.set({ dbxAppKey: k });
     DBX_APP_KEY = k;
   }

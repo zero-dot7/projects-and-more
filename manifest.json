@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Group Speed Dial",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "description": "New tab page with grouped speed-dial tiles. Local only, no accounts, no tracking.",
   "permissions": ["storage", "favicon", "unlimitedStorage", "tabs", "activeTab", "identity"],
   "host_permissions": [

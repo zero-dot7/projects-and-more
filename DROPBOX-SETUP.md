@@ -27,7 +27,9 @@ App key to wartość publiczna — przy PKCE nie stanowi sekretu i nie musi być
 ## 3. Skopiuj App key
 
 1. Otwórz zakładkę **Settings**.
-2. Znajdź pole **App key** (sekcja OAuth 2) i skopiuj wartość.
+2. Znajdź pole **App key** (sekcja OAuth 2) i skopiuj wartość — to krótki ciąg
+   małych liter/cyfr (~15–26 znaków). **Nie myl z „App secret"** (64 znaki) —
+   wklejenie secretu daje błąd Dropboxa „Invalid client_id: Too long".
 
 ## 4. Podłącz rozszerzenie
 
