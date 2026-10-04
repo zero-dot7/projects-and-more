@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speed Dial — TEST</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<!-- mirror of newtab.html body (0.2.1: header/toolbar removed, gear bottom-left) -->
+<button id="btn-backup" style="display:none"></button>
+<button id="btn-settings">⚙</button>
+<button id="btn-new-group" title="New group">+</button>
+<div id="settings-menu" class="menu" hidden>
+  <button data-act="theme" id="theme-label">☀ Day mode</button>
+  <button data-act="view" id="view-label">Group tabs</button>
+  <button data-act="layout">▦ Layout…</button>
+  <hr>
+  <button data-act="import">⬆ Import backup…</button>
+  <button data-act="export">⬇ Export JSON</button>
+  <button data-act="backup">☁ Dropbox backup…</button>
+</div>
+<input type="file" id="file-import" accept="application/json" hidden>
+<main id="board"></main>
+<div id="toast" class="toast" hidden></div>
+<footer><span id="stats"></span> <span id="thumb-stats"></span></footer>
+<!-- pkt 36: licznik miniatur -->
+
+<dialog id="dlg">
+  <form id="dlg-form" method="dialog">
+    <h3 id="dlg-title">Dodaj kafelek</h3>
+    <label><span>Title</span><br><input name="title" id="f-title" required></label>
+    <label>URL<br><input name="url" id="f-url" type="url" placeholder="https://…" required></label>
+    <label id="dlg-group-row">Grupa<br><select name="group" id="f-group"></select></label>
+    <div class="dlg-actions">
+      <button type="button" id="dlg-cancel">Cancel</button>
+      <button type="submit" class="primary" id="dlg-ok">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-group">
+  <form id="dlg-group-form" method="dialog">
+    <h3 id="dlg-group-title">New group</h3>
+    <label>Nazwa<br><input name="name" id="f-group-name" required></label>
+    <label>Kolor
+      <div class="colors" id="color-picker">
+        <button type="button" class="swatch" data-c="var(--accent)" style="--c:var(--accent)"></button>
+        <button type="button" class="swatch" data-c="#e5484d" style="--c:#e5484d"></button>
+        <button type="button" class="swatch" data-c="#46a758" style="--c:#46a758"></button>
+        <button type="button" class="swatch" data-c="#00a2c7" style="--c:#00a2c7"></button>
+        <button type="button" class="swatch" data-c="#ffb224" style="--c:#ffb224"></button>
+        <button type="button" class="swatch" data-c="#8e4ec6" style="--c:#8e4ec6"></button>
+        <button type="button" class="swatch" data-c="#f76b15" style="--c:#f76b15"></button>
+        <button type="button" class="swatch" data-c="#12a594" style="--c:#12a594"></button>
+        <button type="button" class="swatch" data-c="#e93a82" style="--c:#e93a82"></button>
+        <button type="button" class="swatch" data-c="#3e63dd" style="--c:#3e63dd"></button>
+        <!-- pkt 34: paleta rozbudowana 10 -> 20 kolorów -->
+        <button type="button" class="swatch" data-c="#2f9e44" style="--c:#2f9e44"></button>
+        <button type="button" class="swatch" data-c="#66a80f" style="--c:#66a80f"></button>
+        <button type="button" class="swatch" data-c="#f08c00" style="--c:#f08c00"></button>
+        <button type="button" class="swatch" data-c="#e03131" style="--c:#e03131"></button>
+        <button type="button" class="swatch" data-c="#9c36b5" style="--c:#9c36b5"></button>
+        <button type="button" class="swatch" data-c="#6741d9" style="--c:#6741d9"></button>
+        <button type="button" class="swatch" data-c="#0c8599" style="--c:#0c8599"></button>
+        <button type="button" class="swatch" data-c="#f783ac" style="--c:#f783ac"></button>
+        <button type="button" class="swatch" data-c="#845ef7" style="--c:#845ef7"></button>
+        <button type="button" class="swatch" data-c="#c2255c" style="--c:#c2255c"></button>
+      </div>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" id="dlg-group-cancel">Cancel</button>
+      <button type="submit" class="primary" id="dlg-group-ok">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-layout">
+  <form method="dialog">
+    <h3>▦ Tile layout</h3>
+    <label>Columns<br><input type="number" id="f-cols" min="1" max="12" step="1" value="6"></label>
+    <label><span>Rows</span><br><input type="number" id="f-rows" min="1" max="12" step="1" value="4"></label>
+    <label class="chk"><input type="checkbox" id="f-paginate" checked> <span>Paginate when tiles > cols × rows</span></label>
+    <div class="dlg-actions">
+      <button type="button" id="dlg-layout-cancel">Cancel</button>
+      <button type="button" class="primary" id="dlg-layout-ok">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-backup">
+  <form method="dialog">
+    <h3>☁ Backup Dropbox</h3>
+    <p class="hint">Backup saves groups and tiles to <code>speed-dial-backup.json</code> in the Dropbox app folder.</p>
+    <div class="dbx-conn">
+      <span id="dbx-conn-state">Not connected</span>
+      <input type="text" id="dbx-appkey" placeholder="Dropbox app key (one-time)" spellcheck="false" autocomplete="off" style="width:190px;padding:4px 8px;font:inherit;font-size:12px;border:1px solid var(--border,#8884);border-radius:6px;background:transparent;color:inherit">
+      <button type="button" id="btn-dbx-connect" class="primary">Connect Dropbox</button>
+      <button type="button" id="btn-dbx-disconnect" style="display:none">Disconnect</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="f-dbx-auto" checked> <span>Auto-backup on every change (max 1/5 min)</span></label>
+    <div id="dbx-status" class="hint"></div>
+    <div class="dlg-actions">
+      <button type="button" id="btn-dbx-restore">Restore from Dropbox</button>
+      <span class="spacer"></span>
+      <button type="button" id="dlg-backup-cancel">Cancel</button>
+      <button type="button" class="primary" id="dlg-backup-ok">Save settings</button>
+    </div>
+  </form>
+</dialog>
+
+<template id="tpl-group">
+  <section class="group" data-id="">
+    <div class="group-head" draggable="false">
+      <button class="chev" title="Collapse/expand">▸</button>
+      <h2 contenteditable="false" spellcheck="false"></h2>
+      <span class="count"></span>
+      <span class="spacer"></span>
+      <button class="icon-btn add-tile" title="Add tile to group">+</button>
+      <button class="icon-btn thumb-group" title="Refresh group thumbnails (queued)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+      <button class="icon-btn edit-group" title="Edit group">✎</button>
+      <button class="icon-btn del-group" title="Delete group">🗑</button>
+    </div>
+    <div class="tiles"></div>
+  </section>
+</template>
+
+<template id="tpl-tile">
+  <a class="tile" draggable="true" href="#">
+    <span class="shot"><span class="thumb"><img class="fav" alt="" draggable="false"><span class="letter"></span></span><span class="tile-cap"><img class="cap-fav" alt=""><span class="t-title"></span></span></span>
+    <span class="t-host"></span>
+    <span class="tile-actions">
+      <button class="icon-btn edit-tile" title="Edit">✎</button>
+      <button class="icon-btn del-tile" title="Delete">✕</button>
+    </span>
+  </a>
+</template>
+
+<script src="chrome-mock.js"></script>
+<script src="../app.js"></script>
+</body>
+</html>
