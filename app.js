@@ -106,13 +106,15 @@ function findTile(id) {
 
 async function makeThumb(tile, groupId) {
   if (!/^https?:/.test(tile.url)) throw new Error('not http(s)');
-  // pkt 36: okno w obszarze ekranu (Chrome nie maluje okien poza ekranem,
-  // przez co captureVisibleTab zwracał błąd); focused:false = nie kradnie fokusu
+  // pkt 41: okno MUSI być w obszarze ekranu — Chrome maluje tylko widoczne okna,
+  // a captureVisibleTab wymaga wymalowanego okna (3000,3000 z pkt 40 = czarny zrzut/błąd).
+  // Prawy dolny róg ekranu + focused:false = minimalnie widoczny, nie kradnie fokusu.
+  const W = (globalThis.screen?.width) || 1280, H = (globalThis.screen?.height) || 800;
   const win = await chrome.windows.create({
     url: tile.url,
     type: 'popup',
-    left: 3000,
-    top: 3000,
+    left: Math.max(0, W - 300),
+    top: Math.max(0, H - 240),
     width: 1280,
     height: 800,
     focused: false,
@@ -206,7 +208,11 @@ function render() {
   const tThumb = state.groups.reduce((n, g) => n + g.tiles.filter(t => t.thumb).length, 0);
   const tErr = state.groups.reduce((n, g) => n + g.tiles.filter(t => t.thumbError).length, 0);
   const span = $('#thumb-stats');
-  if (span) span.textContent = tErr ? `Thumbnails: ${tThumb}/${tAll} (errors: ${tErr})` : `Thumbnails: ${tThumb}/${tAll}`;
+  const qLen = thumbQueue.length, qAct = thumbActive;
+  let txt = `Thumbnails: ${tThumb}/${tAll}`;
+  if (qLen || qAct) txt += ` — generating ${qAct}/${qAct + qLen}`; /* pkt 41: postęp kolejki */
+  if (tErr) txt += ` (errors: ${tErr})`;
+  if (span) span.textContent = txt;
 }
 
 function renderTabBar() {

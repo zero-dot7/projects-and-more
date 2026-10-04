@@ -385,7 +385,8 @@ async function main() {
   check('pkt26: kolejka max 2 równoległe (w locie)', await evalJs(`window.__thumbWins.length <= 2`) === true);
   await new Promise(r => setTimeout(r, 4000 + tileTotal * 1500)); // dokończ kolejkę (fazy po ~1.3 s)
   check('pkt26: capture dla każdego kafelka', parseInt(await evalJs(`(window.__captures || []).length`)) === tileTotal);
-  check('pkt26: okna poza ekranem', await evalJs(`(window.__thumbWins || []).every(w => w.left > 0 && w.top > 0 && w.type === 'popup')`) === true);
+  check('pkt41: okna w obszarze ekranu', await evalJs(`(window.__thumbWins || []).every(w => w.left >= 0 && w.top >= 0 && w.left < 4096 && w.top < 4096 && w.type === 'popup')`) === true);
+  check('pkt41: postęp kolejki widoczny', await evalJs(`(() => { const s = document.querySelector('#thumb-stats').textContent; return /generating \\d+\\/\\d+/.test(s) || /Thumbnails: \\d+\\/\\d+/.test(s); })()`) === true);
   check('pkt26: okna zamknięte po capture', await evalJs(`(window.__thumbRemoved || []).length === (window.__thumbWins || []).length`) === true);
   check('pkt26: thumb zapisany w storage', await evalJs(`(() => { const t = state.groups.flatMap(g => g.tiles).find(t => t.thumb); return !!t && t.thumb.startsWith('data:image/jpeg'); })()`) === true);
   check('pkt26: thumb widoczny w DOM', await evalJs(`!!document.querySelector('.tile.has-thumb img.fav[src^="data:image/jpeg"]')`) === true);

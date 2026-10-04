@@ -36,7 +36,7 @@ async function main() {
   })()`, awaitPromise:true, returnByValue:true});
   await new Promise(r=>setTimeout(r,4000));
   // day theme (backup may contain night)
-  await cdp(ws,idc++,'Runtime.evaluate',{expression:`if (typeof state !== 'undefined' && state.theme !== 'day') { state.theme = 'day'; applyTheme(); }`, returnByValue:true});
+  await cdp(ws,idc++,'Runtime.evaluate',{expression:`if (state.view.mode !== 'tabs') { state.view.mode = 'tabs'; if(!state.view.activeId && state.groups.length) state.view.activeId = state.groups[0].id; render(); } if (state.theme !== 'day') { state.theme = 'day'; applyTheme(); }`, returnByValue:true});
   await new Promise(r=>setTimeout(r,400));
   let r = await cdp(ws,idc++,'Page.captureScreenshot',{format:'png'});
   fs.writeFileSync('/tmp/sd5-day.png', Buffer.from(r.data,'base64'));
