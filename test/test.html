@@ -9,14 +9,14 @@
 <!-- mirror of newtab.html body (0.2.1: header/toolbar removed, gear bottom-left) -->
 <button id="btn-backup" style="display:none"></button>
 <button id="btn-settings">⚙</button>
-<button id="btn-new-group" title="Nowa grupa">+</button>
+<button id="btn-new-group" title="New group">+</button>
 <div id="settings-menu" class="menu" hidden>
+  <button data-act="theme" id="theme-label">☀ Day mode</button>
+  <button data-act="view" id="view-label">Group tabs</button>
+  <button data-act="layout">▦ Layout…</button>
+  <hr>
   <button data-act="import">⬆ Import backup…</button>
   <button data-act="export">⬇ Export JSON</button>
-  <button data-act="view" id="view-label" >Group tabs</button>
-  <button data-act="layout">▦ Layout…</button>
-  <button data-act="theme" id="theme-label">☀ Day mode</button>
-  <hr>
   <button data-act="backup">☁ Dropbox backup…</button>
 </div>
 <input type="file" id="file-import" accept="application/json" hidden>

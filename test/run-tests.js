@@ -390,6 +390,23 @@ async function main() {
   check('pkt26: okna zamknięte po capture', await evalJs(`(window.__thumbRemoved || []).length === (window.__thumbWins || []).length`) === true);
   check('pkt26: thumb zapisany w storage', await evalJs(`(() => { const t = state.groups.flatMap(g => g.tiles).find(t => t.thumb); return !!t && t.thumb.startsWith('data:image/jpeg'); })()`) === true);
   check('pkt26: thumb widoczny w DOM', await evalJs(`!!document.querySelector('.tile.has-thumb img.fav[src^="data:image/jpeg"]')`) === true);
+  // --- pkt 44-48: menu ustawień + export ---
+  check('pkt44: theme na górze menu', await evalJs(`(() => { const m = [...document.querySelectorAll('#settings-menu > button')]; return m[0].dataset.act === 'theme' && m[0].id === 'theme-label'; })()`) === true);
+  check('pkt45: Group tabs drugie od góry', await evalJs(`(() => { const m = [...document.querySelectorAll('#settings-menu > button')]; return m[1].dataset.act === 'view'; })()`) === true);
+  check('pkt46: Layout trzecie od góry', await evalJs(`(() => { const m = [...document.querySelectorAll('#settings-menu > button')]; return m[2].dataset.act === 'layout'; })()`) === true);
+  check('pkt48: menu EN-only', await evalJs(`(() => { const t = document.querySelector('#settings-menu').textContent; return !/[ąćęłńóśźż]/i.test(t) && /Import backup/.test(t) && /Export JSON/.test(t); })()`) === true);
+  check('pkt47: export z data/czasem w nazwie', await evalJs(`(() => {
+    let name = 'NONE';
+    const a = document.createElement('a');
+    Object.defineProperty(a, 'href', { set: () => {}, get: () => 'x' });
+    a.click = () => { name = a.download; };
+    const origCreate = URL.createObjectURL, origRevoke = URL.revokeObjectURL, orig = document.createElement.bind(document);
+    URL.createObjectURL = () => 'blob:x'; URL.revokeObjectURL = () => {};
+    document.createElement = (t) => t === 'a' ? a : orig(t);
+    try { exportJson(); } catch (e) { name = 'ERR:' + e.message; }
+    document.createElement = orig; URL.createObjectURL = origCreate; URL.revokeObjectURL = origRevoke;
+    return /^speed-dial-backup_\\d{2}-\\d{2}-\\d{2}_\\d{2}-\\d{2}\\.json$/.test(name);
+  })()`) === true);
 
   console.log(results.join('\n'));
   const fails = results.filter(r => r.startsWith('FAIL')).length;

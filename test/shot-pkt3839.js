@@ -38,6 +38,9 @@ async function main() {
   // day theme (backup may contain night)
   await cdp(ws,idc++,'Runtime.evaluate',{expression:`if (state.view.mode !== 'tabs') { state.view.mode = 'tabs'; if(!state.view.activeId && state.groups.length) state.view.activeId = state.groups[0].id; render(); } if (state.theme !== 'day') { state.theme = 'day'; applyTheme(); }`, returnByValue:true});
   await new Promise(r=>setTimeout(r,400));
+  // pkt 44-46: otwórz menu ustawień, aby screenshot pokazał kolejność przycisków
+  await cdp(ws,idc++,'Runtime.evaluate',{expression:`document.querySelector('#btn-settings').click()`, returnByValue:true});
+  await new Promise(r=>setTimeout(r,300));
   let r = await cdp(ws,idc++,'Page.captureScreenshot',{format:'png'});
   fs.writeFileSync('/tmp/sd5-day.png', Buffer.from(r.data,'base64'));
   console.log('day saved');
