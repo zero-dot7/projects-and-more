@@ -557,7 +557,7 @@ function openGroupDialog(group) {
 /* ---------- Dropbox backup (pkt 54: OAuth 2.0 + PKCE, bez ręcznych tokenów) ---------- */
 
 const DBX_PATH = '/speed-dial-backup.json';
-const DBX_APP_KEY = window.__TEST_DBX_APP_KEY || ''; // app key z https://www.dropbox.com/developers/apps (wartość publiczna, bezpieczna przy PKCE)
+const DBX_APP_KEY_FALLBACK = window.__TEST_DBX_APP_KEY || ''; // test-harness only; normalnie app key wpisuje user w dialogu (storage, klucz dbxAppKey)
 const DBX_REDIRECT = 'https://' + chrome.runtime.id + '.chromiumapp.org/';
 const dbxState = { accessToken: '', refreshToken: '', expiresAt: 0, auto: true, lastPush: 0, busy: false, authing: false };
 
@@ -589,9 +589,20 @@ function b64url(bytes) {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+async function dbxGetAppKey() {
+  const o = await chrome.storage.sync.get('dbxAppKey');
+  return (o && o.dbxAppKey) || DBX_APP_KEY_FALLBACK || '';
+}
+
 async function dbxAuthorize() {
   if (dbxState.authing) return;
-  if (!DBX_APP_KEY) { $('#dbx-status').textContent = '\u2717 App key not configured (DBX_APP_KEY in app.js)'; return; }
+  let DBX_APP_KEY = await dbxGetAppKey();
+  if (!DBX_APP_KEY) {
+    const k = ($('#dbx-appkey') && $('#dbx-appkey').value.trim()) || '';
+    if (!k) { $('#dbx-status').textContent = '\u2717 Enter your Dropbox app key first (dropbox.com/developers/apps)'; return; }
+    await chrome.storage.sync.set({ dbxAppKey: k });
+    DBX_APP_KEY = k;
+  }
   dbxState.authing = true;
   $('#dbx-status').textContent = 'Connecting\u2026';
   try {
@@ -615,7 +626,10 @@ async function dbxAuthorize() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: DBX_APP_KEY, redirect_uri: DBX_REDIRECT }),
     });
-    if (!res.ok) throw new Error('token exchange failed: ' + res.status);
+    if (!res.ok) {
+      if (res.status === 400) await chrome.storage.sync.remove('dbxAppKey'); // zły app key — pozwól wpisać ponownie
+      throw new Error('token exchange failed: ' + res.status);
+    }
     const t = await res.json();
     await dbxSaveTokens(t.access_token, t.refresh_token, t.expires_in);
     dbxUpdateUi();
@@ -629,6 +643,7 @@ async function dbxAuthorize() {
 }
 
 async function dbxRefreshAccessToken() {
+  const DBX_APP_KEY = await dbxGetAppKey();
   const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -714,6 +729,15 @@ function dbxUpdateUi() {
   $('#btn-dbx-connect').style.display = connected ? 'none' : '';
   $('#btn-dbx-disconnect').style.display = connected ? '' : 'none';
   $('#dbx-conn-state').textContent = connected ? 'Connected' : 'Not connected';
+  chrome.storage.sync.get('dbxAppKey').then(o => {
+    const hasKey = !!(o && o.dbxAppKey);
+    const inp = $('#dbx-appkey');
+    if (inp) {
+      inp.style.display = hasKey || connected ? 'none' : '';
+      inp.value = '';
+      inp.placeholder = 'Dropbox app key (one-time)';
+    }
+  });
 }
 
 function openBackupDialog() {

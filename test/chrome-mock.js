@@ -18,6 +18,17 @@
           },
           async set(obj) { Object.assign(store, obj); },
         },
+        sync: { // pkt 54: app key trzymany w storage.sync (alias tego samego store w mocku)
+          async get(k) {
+            if (typeof k === 'string') return k in store ? { [k]: store[k] } : {};
+            if (Array.isArray(k)) return Object.fromEntries(k.filter(x => x in store).map(x => [x, store[x]]));
+            const out = {};
+            for (const key of Object.keys(k)) if (key in store) out[key] = store[key];
+            return out;
+          },
+          async set(obj) { Object.assign(store, obj); },
+          async remove(k) { delete store[k]; },
+        },
       },
       identity: { // pkt 54 mock: launchWebAuthFlow zwraca redirect z code
         launchWebAuthFlow(o, cb) {
