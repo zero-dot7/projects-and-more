@@ -461,8 +461,8 @@ function moveTile({ tileId, fromGroup }, toGroupId, beforeTileId) {
   const idx = from.tiles.findIndex(t => t.id === tileId);
   if (idx === -1) return;
   const [tile] = from.tiles.splice(idx, 1);
+  // pos liczony PO usunięciu — dla tej samej grupy jest już poprawny, bez korekty
   let pos = to.tiles.findIndex(t => t.id === beforeTileId);
-  if (pos === -1 || from === to && pos > idx) pos = to.tiles.length;
   if (pos === -1) pos = to.tiles.length;
   to.tiles.splice(pos, 0, tile);
   save(); render();
