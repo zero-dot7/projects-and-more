@@ -10,7 +10,7 @@ const DEFAULTS = {
       { id: 't4', title: 'GitHub', url: 'https://github.com' },
     ]},
     { id: 'g2', name: 'Dev', color: '#00a2c7', open: true, tiles: [
-      { id: 't5', title: 'Hermes docs', url: 'https://hermes-agent.nousresearch.com/docs' },
+      { id: 't5', title: 'Docs', url: 'https://developer.mozilla.org/' },
       { id: 't6', title: 'MDN', url: 'https://developer.mozilla.org' },
     ]},
   ],
