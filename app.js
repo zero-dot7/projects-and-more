@@ -749,6 +749,8 @@ function dbxUpdateUi() {
       inp.value = '';
       inp.placeholder = 'Dropbox app key (one-time)';
     }
+    const chg = $('#btn-dbx-changekey');
+    if (chg) chg.style.display = hasKey ? '' : 'none';
   });
 }
 
@@ -767,6 +769,14 @@ function openBackupDialog() {
   };
   $('#btn-dbx-connect').onclick = () => dbxAuthorize();
   $('#btn-dbx-disconnect').onclick = () => dbxDisconnect();
+  const chgKey = $('#btn-dbx-changekey');
+  if (chgKey) chgKey.onclick = async () => {
+    await chrome.storage.sync.remove('dbxAppKey');
+    $('#dbx-status').textContent = 'Enter a new app key and connect';
+    dbxUpdateUi();
+    const inp = $('#dbx-appkey');
+    if (inp) inp.focus();
+  };
   $('#btn-dbx-restore').onclick = () => dbxRestore();
 }
 
