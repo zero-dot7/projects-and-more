@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Group Speed Dial",
+  "version": "0.3.9",
+  "description": "New tab page with grouped speed-dial tiles. Local only, no accounts, no tracking.",
+  "permissions": ["storage", "favicon", "unlimitedStorage", "tabs", "activeTab", "identity"],
+  "host_permissions": [
+    "https://content.dropboxapi.com/*",
+    "https://api.dropboxapi.com/oauth2/token",
+    "<all_urls>"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  }
+}

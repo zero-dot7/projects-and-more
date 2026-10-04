@@ -1,0 +1,437 @@
+:root {
+  --bg: #101216;
+  --panel: #1a1e24;
+  --panel-2: #22272f;
+  --text: #e8eaed;
+  --muted: #9aa0a6;
+  --accent: #fb542b;
+  --border: #2c323b;
+  --radius: 12px;
+  --tab-label: #ffffff; /* pkt 20: biały tekst zakładek */
+}
+
+/* pkt 14: motyw dzienny — nadpisywany przez [data-theme="day"] na <html> */
+html[data-theme="day"] {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #eceef1;
+  --text: #1b1f24;
+  --muted: #5f6368;
+  --border: #d8dce1;
+  --tab-label: #1b1f24; /* pkt 20: w motywie dziennym ciemny tekst zakładek */
+  /* pkt 15/16: ikony +/-✎/🗑 czytelne w trybie dziennym */
+  --icon-chip: rgba(255,255,255,.85);
+  --icon-glyph: #1b1f24;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font: inherit;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { filter: brightness(1.1); }
+
+main { padding: 0 28px 90px; }
+
+.group { margin-bottom: 22px; }
+/* pkt 19: w trybie zakładek bez nagłówka grupy — tylko przyciski akcji z prawej */
+.group.no-head .group-head { margin-bottom: 4px; }
+.group.no-head .group-head .chev,
+.group.no-head .group-head h2,
+.group.no-head .group-head .count,
+.group.no-head .group-head .spacer { display: none; }
+.group.no-head .group-head { justify-content: flex-end; }
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  user-select: none;
+}
+.group-head h2 {
+  font-size: 15px;
+  font-weight: 700; /* pkt 23: wyraźniejszy nagłówek grupy */
+  margin: 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border-bottom: 2px solid var(--gcolor, var(--accent));
+  outline: none;
+}
+.group-head h2:focus { background: var(--panel); }
+.chev {
+  width: 26px; height: 26px;
+  padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--muted);
+  transition: transform .15s;
+}
+.group.open .chev { transform: rotate(90deg); }
+.count { color: var(--muted); font-size: 13px; }
+.spacer { flex: 1; }
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+  gap: 14px;
+  row-gap: 22px; /* pkt 18: miejsce na .t-host pod kafelkiem */
+}
+.tiles.no-paginate { grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); }
+.group:not(.open) .tiles { display: none; }
+
+/* pagination bar */
+.page-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0 2px;
+}
+.page-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.page-btn:hover { color: var(--text); }
+.page-btn[disabled] { opacity: .4; cursor: default; }
+.page-btn.cur { background: var(--tab-active, #339af0); color: #fff; border-color: transparent; }
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 6px 6px 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: transform .12s, border-color .12s, box-shadow .12s;
+}
+.tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--gcolor, var(--accent));
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.tile.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+/* pkt 18: kafelek landscape (IMG2/IMG8) — duży zrzut strony + pasek favicon/tytuł na dole */
+.shot {
+  display: flex;
+  flex-direction: column-reverse; /* pkt 29: pasek tytułu nad zrzutem (był pod) */
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--panel-2);
+}
+.thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10; /* cały kafelek (z paskiem tytułu) ≈ 4:3 landscape jak IMG2/IMG8 */
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.fav { width: 28px; height: 28px; }
+.letter { font-size: 22px; font-weight: 700; color: var(--gcolor, var(--accent)); }
+
+.tile.has-thumb .fav {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.tile-cap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 7px 3px; /* pkt 42: ciaśniejszy pasek tytułu (było 5/6px) */
+  min-width: 0;
+}
+.cap-fav {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  flex: none;
+}
+.cap-fav.cap-off { display: none; }
+.t-title {
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-host {
+  position: absolute;
+  left: 0; right: 0; top: -20px; /* pkt 29: host nad kafelkiem (był pod: bottom: -20px) */
+  font-size: 11px;
+  text-align: left; /* korekta: wyrównanie do lewej (było center) */
+  padding-left: 7px; /* pkt 29: w linii z padded contentem kafelka */
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.tiles { position: relative; padding-top: 22px; /* pkt 29: miejsce na .t-host nad pierwszym rzędem */ }
+.tile-actions {
+  position: absolute;
+  top: 4px; right: 4px;
+  display: none;
+  gap: 2px;
+}
+.tile:hover .tile-actions { display: flex; }
+.icon-btn {
+  background: var(--icon-chip, rgba(0,0,0,.55));
+  border: none;
+  color: var(--icon-glyph, var(--text));
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.icon-btn:hover { color: var(--accent); }
+
+.empty-hint {
+  color: var(--muted);
+  padding: 40px 0;
+  text-align: center;
+}
+
+footer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 8px 28px;
+  color: var(--muted);
+  font-size: 12.5px;
+  background: linear-gradient(transparent, var(--bg) 40%);
+  display: flex;
+  justify-content: space-between;
+}
+/* pkt 36: licznik miniatur po prawej */
+footer #thumb-stats { text-align: right; }
+
+dialog {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  min-width: 340px;
+}
+dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog h3 { margin: 0 0 14px; }
+dialog label { display: block; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+dialog input, dialog select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+}
+dialog input:focus, dialog select:focus { outline: none; border-color: var(--accent); }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.colors { display: flex; gap: 8px; margin-top: 6px; }
+.swatch {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--c);
+  padding: 0;
+}
+.swatch.selected { border-color: #fff; }
+
+.tile.dragging { opacity: .4; }
+
+.hint { color: var(--muted); font-size: 12.5px; margin: 6px 0; word-break: break-word; }
+label.chk { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
+label.chk input { width: auto; margin: 0; }
+.dlg-actions .spacer { flex: 1; }
+code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
+
+/* ---------- settings menu (gear, bottom-left) ---------- */
+
+#btn-settings {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 19px;
+  line-height: 1;
+  padding: 0;
+  z-index: 50;
+  opacity: .55;
+  background: var(--panel);
+}
+#btn-settings:hover { opacity: 1; }
+
+#btn-new-group { /* pkt 30: stały przycisk nowej grupy, prawy górny róg */
+  position: fixed;
+  top: 2px; /* pkt 33: podniesiony (było 14px) */
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  padding: 0;
+  z-index: 50;
+  /* pkt 33: bez opacity — półprzezroczyste tło prześwituje i widać "ducha" + spod paska zakładek */
+  background: var(--panel);
+}
+#btn-new-group:hover { background: var(--border); }
+
+.menu {
+  position: fixed;
+  left: 18px;
+  bottom: 66px;
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45);
+}
+.menu[hidden] { display: none; }
+.menu button {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+.menu button:hover { background: var(--panel-2); border: none; color: var(--text); }
+.menu hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 8px;
+}
+
+/* ---------- group tabs (pill, wg IMG1/IMG2) ---------- */
+
+.tab-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap; /* pkt 31: zawsze jedna linia (było wrap → różnie wg IMG11/IMG12) */
+  gap: 6px;
+  padding: 0;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.tab-bar[hidden] { display: none; }
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0; /* pkt 32: szerokość wg zawartości (było 120px → puste ramki przy AI/IN/FIN) */
+  max-width: 300px; /* pkt 32: więcej miejsca na długie nazwy (było 230px → ucinanie) */
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0; /* pkt 17: prostokątne zakładki (było 999px/pill) */
+  color: var(--tab-label, var(--text)); /* pkt 20: biały tekst zakładek */
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px; /* pkt 20: większa czcionka nazwy zakładki (było 13.5px) */
+  font-weight: 700; /* pkt 23: BOLD na nazwie zakładek */
+  transition: background .12s, color .12s, border-color .12s;
+}
+.tab:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
+/* pkt 43: zamiast pełnego wypełnienia (pkt 28) pasek koloru NAD nazwą zakładki */
+.tab.active {
+  background: transparent;
+  border-top: 5px solid var(--gcolor, var(--tab-active, #69db7c));
+  color: var(--text);
+  padding-top: 3px; /* 7px - 4px, zachowana wysokość */
+}
+.tab.active:hover { background: var(--panel); }
+.tab .dot {
+  flex: none;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gcolor, var(--accent));
+}
+.tab .tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab .tab-count {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 1px 6px;
+}
+.tab.active .tab-count { color: var(--text); background: var(--panel-2); }
+
+/* pkt 12: .tab-close usunięty — zamykanie przez middle-click lub menu grupy */
+
+.tab-new {
+  padding: 7px 14px;
+  border-radius: 0; /* pkt 17: prostokątna jak zakładki */
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  border: 1px dashed transparent;
+}
+.tab-new:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
+
+/* ---------- toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.35);
+  padding: 10px 18px;
+  font-size: 13.5px;
+  z-index: 999;
+  max-width: min(90vw, 560px);
+}
+.toast[hidden] { display: none; }
+
+body.view-tabs #board { border-top: 1px solid var(--border); padding-top: 4px; } /* pkt 21: minimalna przerwa zakładki–ramka (było 16px) */
+body.view-tabs .chev { display: none; } /* w trybie zakładek nie zwijamy grup */
+
+
