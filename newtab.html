@@ -8,15 +8,15 @@
 <body>
 <input type="file" id="file-import" accept=".json,.group_speed_dial,application/json" hidden>
 
-<button id="btn-settings" title="Ustawienia">⚙</button>
-<button id="btn-new-group" title="Nowa grupa">+</button>
+<button id="btn-settings" title="Settings">⚙</button>
+<button id="btn-new-group" title="New group">+</button>
 <div id="settings-menu" class="menu" hidden>
-  <button data-act="import">⬆ Importuj backup…</button>
-  <button data-act="export">⬇ Eksportuj JSON</button>
+  <button data-act="theme" id="theme-label">☀ Day mode</button>
   <button data-act="view" id="view-label">Group tabs</button>
   <button data-act="layout">▦ Layout…</button>
-  <button data-act="theme" id="theme-label">☀ Tryb dzienny</button>
         <hr>
+  <button data-act="import">⬆ Import backup…</button>
+  <button data-act="export">⬇ Export JSON</button>
   <button data-act="backup">☁ Backup Dropbox…</button>
 </div>
 
@@ -103,7 +103,7 @@
     <p class="hint" id="dlg-import-summary"></p>
     <div class="dlg-actions">
       <button type="button" id="dlg-import-cancel" value="cancel">Cancel</button>
-      <button type="button" class="primary" id="dlg-import-ok" value="ok">Importuj</button>
+      <button type="button" class="primary" id="dlg-import-ok" value="ok">Import</button>
     </div>
   </form>
 </dialog>
