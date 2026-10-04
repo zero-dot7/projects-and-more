@@ -17,25 +17,6 @@
           async set(obj) { Object.assign(store, obj); },
         },
       },
-      topSites: { // pkt 24 mock
-        async get() {
-          return [
-            { url: 'https://github.com', title: 'GitHub' },
-            { url: 'https://news.ycombinator.com', title: 'Hacker News' },
-            { url: 'https://developer.mozilla.org', title: 'MDN' },
-            // pkt 27: dalsze strony, żeby po ukryciu sekcja dopełniała się do 10
-            { url: 'https://www.wikipedia.org', title: 'Wikipedia' },
-            { url: 'https://www.youtube.com', title: 'YouTube' },
-            { url: 'https://reddit.com', title: 'Reddit' },
-            { url: 'https://stackoverflow.com', title: 'Stack Overflow' },
-            { url: 'https://www.theverge.com', title: 'The Verge' },
-            { url: 'https://arstechnica.com', title: 'Ars Technica' },
-            { url: 'https://example.com', title: 'Example' },
-            { url: 'https://example.org', title: 'Example Org' },
-            { url: 'https://example.net', title: 'Example Net' },
-          ];
-        },
-      },
       windows: { // pkt 26 mock
         async create(o) {
           window.__thumbWins = window.__thumbWins || [];
