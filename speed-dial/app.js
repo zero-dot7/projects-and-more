@@ -10,7 +10,7 @@ const DEFAULTS = {
       { id: 't4', title: 'GitHub', url: 'https://github.com' },
     ]},
     { id: 'g2', name: 'Dev', color: '#00a2c7', open: true, tiles: [
-      { id: 't5', title: 'Docs', url: 'https://developer.mozilla.org/' },
+      { id: 't5', title: 'Wikipedia', url: 'https://www.wikipedia.org/' },
       { id: 't6', title: 'MDN', url: 'https://developer.mozilla.org' },
     ]},
   ],
@@ -594,12 +594,24 @@ async function dbxGetAppKey() {
   return (o && o.dbxAppKey) || DBX_APP_KEY_FALLBACK || '';
 }
 
+function dbxValidAppKeyFmt(k) {
+  // Dropbox app key: krótki lowercase id (typ. 15–26 znaków). 64-znakowy secret / wklejony
+  // blok ustawień nie przejdzie — Dropbox zwraca wtedy "Invalid client_id: Too long".
+  return /^[a-z0-9_-]{5,50}$/.test(k);
+}
+
 async function dbxAuthorize() {
   if (dbxState.authing) return;
   let DBX_APP_KEY = await dbxGetAppKey();
+  if (DBX_APP_KEY && !dbxValidAppKeyFmt(DBX_APP_KEY)) {
+    // zły key zapisany wcześniej (np. app secret) — wyczyść i pozwól wpisać ponownie
+    await chrome.storage.sync.remove('dbxAppKey');
+    DBX_APP_KEY = '';
+  }
   if (!DBX_APP_KEY) {
     const k = ($('#dbx-appkey') && $('#dbx-appkey').value.trim()) || '';
     if (!k) { $('#dbx-status').textContent = '\u2717 Enter your Dropbox app key first (dropbox.com/developers/apps)'; return; }
+    if (!dbxValidAppKeyFmt(k)) { $('#dbx-status').textContent = '\u2717 That does not look like an app key \u2014 copy the short "App key" from Settings (not the 64-char App secret)'; return; }
     await chrome.storage.sync.set({ dbxAppKey: k });
     DBX_APP_KEY = k;
   }
@@ -620,7 +632,11 @@ async function dbxAuthorize() {
     });
     const u = new URL(redirect);
     const code = u.searchParams.get('code') || new URLSearchParams(u.hash.slice(1)).get('code');
-    if (!code) throw new Error('no code in redirect');
+    if (!code) {
+      const e = u.searchParams.get('error') || '';
+      const ed = u.searchParams.get('error_description') || '';
+      throw new Error(e ? ('auth: ' + e + (ed ? ' — ' + ed : '')) : 'no code in redirect');
+    }
     const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -628,7 +644,10 @@ async function dbxAuthorize() {
     });
     if (!res.ok) {
       if (res.status === 400) await chrome.storage.sync.remove('dbxAppKey'); // zły app key — pozwól wpisać ponownie
-      throw new Error('token exchange failed: ' + res.status);
+      const body = await res.text().catch(() => '');
+      let detail = '';
+      try { const j = JSON.parse(body); detail = j.error_description || j.error || ''; } catch { detail = body.slice(0, 140); }
+      throw new Error('token exchange ' + res.status + (detail ? ': ' + detail : ''));
     }
     const t = await res.json();
     await dbxSaveTokens(t.access_token, t.refresh_token, t.expires_in);
@@ -670,18 +689,19 @@ async function dbxPush(silent = false) {
   if (!token) { if (!silent) $('#dbx-status').textContent = '\u2717 Not connected'; return; }
   dbxState.busy = true;
   try {
-    const payload = JSON.stringify({ groups: state.groups, savedAt: new Date().toISOString() }, null, 2);
+    const payload = new TextEncoder().encode(JSON.stringify({ groups: state.groups, savedAt: new Date().toISOString() }, null, 2));
     const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/octet-stream',
         'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH, mode: 'overwrite', mute: true }),
       },
       body: payload,
     });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
-      try { const e = await res.json(); msg = e.error_summary || msg; } catch {}
+      try { const e = await res.json(); msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg; } catch { try { msg += ' — ' + (await res.text()).slice(0, 120); } catch {} }
       throw new Error('Dropbox: ' + msg);
     }
     dbxState.lastPush = Date.now();
@@ -705,7 +725,7 @@ async function dbxRestore() {
     });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
-      try { const e = await res.json(); msg = e.error_summary || msg; } catch {}
+      try { const e = await res.json(); msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg; } catch { try { msg += ' — ' + (await res.text()).slice(0, 120); } catch {} }
       throw new Error(msg);
     }
     const data = await res.json();
@@ -737,6 +757,8 @@ function dbxUpdateUi() {
       inp.value = '';
       inp.placeholder = 'Dropbox app key (one-time)';
     }
+    const chg = $('#btn-dbx-changekey');
+    if (chg) chg.style.display = hasKey ? '' : 'none';
   });
 }
 
@@ -755,6 +777,14 @@ function openBackupDialog() {
   };
   $('#btn-dbx-connect').onclick = () => dbxAuthorize();
   $('#btn-dbx-disconnect').onclick = () => dbxDisconnect();
+  const chgKey = $('#btn-dbx-changekey');
+  if (chgKey) chgKey.onclick = async () => {
+    await chrome.storage.sync.remove('dbxAppKey');
+    $('#dbx-status').textContent = 'Enter a new app key and connect';
+    dbxUpdateUi();
+    const inp = $('#dbx-appkey');
+    if (inp) inp.focus();
+  };
   $('#btn-dbx-restore').onclick = () => dbxRestore();
 }
 
