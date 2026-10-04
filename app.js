@@ -554,49 +554,112 @@ function openGroupDialog(group) {
   };
 }
 
-/* ---------- Dropbox backup ---------- */
+/* ---------- Dropbox backup (pkt 54: OAuth 2.0 + PKCE, bez ręcznych tokenów) ---------- */
 
 const DBX_PATH = '/speed-dial-backup.json';
-const dbxState = { token: '', auto: true, lastPush: 0, busy: false };
+const DBX_APP_KEY = window.__TEST_DBX_APP_KEY || ''; // app key z https://www.dropbox.com/developers/apps (wartość publiczna, bezpieczna przy PKCE)
+const DBX_REDIRECT = 'https://' + chrome.runtime.id + '.chromiumapp.org/';
+const dbxState = { accessToken: '', refreshToken: '', expiresAt: 0, auto: true, lastPush: 0, busy: false, authing: false };
 
 async function dbxLoadSettings() {
-  const s = await chrome.storage.local.get(['dbxToken', 'dbxAuto']);
-  dbxState.token = s.dbxToken || '';
+  const s = await chrome.storage.local.get(['dbxAccess', 'dbxRefresh', 'dbxExpires', 'dbxAuto']);
+  dbxState.accessToken = s.dbxAccess || '';
+  dbxState.refreshToken = s.dbxRefresh || '';
+  dbxState.expiresAt = s.dbxExpires || 0;
   dbxState.auto = s.dbxAuto !== false;
 }
 
-async function dbxSaveSettings(token, auto) {
-  await chrome.storage.local.set({ dbxToken: token, dbxAuto: auto });
-  dbxState.token = token;
-  dbxState.auto = auto;
+async function dbxSaveTokens(access, refresh, expiresIn) {
+  dbxState.accessToken = access;
+  if (refresh) dbxState.refreshToken = refresh;
+  dbxState.expiresAt = Date.now() + (expiresIn || 14400) * 1000;
+  await chrome.storage.local.set({ dbxAccess: access, dbxRefresh: dbxState.refreshToken, dbxExpires: dbxState.expiresAt });
 }
 
-async function dbxRequest(endpoint, body, isJson = true) {
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + dbxState.token,
-      ...(isJson ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: isJson ? JSON.stringify(body) : body,
-  });
-  if (!res.ok) {
-    let msg = res.status + ' ' + res.statusText;
-    try { const e = await res.json(); msg = e.error_summary || msg; } catch {}
-    throw new Error('Dropbox: ' + msg);
+async function dbxDisconnect() {
+  dbxState.accessToken = ''; dbxState.refreshToken = ''; dbxState.expiresAt = 0;
+  await chrome.storage.local.set({ dbxAccess: '', dbxRefresh: '', dbxExpires: 0 });
+  dbxUpdateUi();
+  $('#dbx-status').textContent = 'Disconnected';
+}
+
+function b64url(bytes) {
+  let s = '';
+  for (const c of new Uint8Array(bytes)) s += String.fromCharCode(c);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function dbxAuthorize() {
+  if (dbxState.authing) return;
+  if (!DBX_APP_KEY) { $('#dbx-status').textContent = '\u2717 App key not configured (DBX_APP_KEY in app.js)'; return; }
+  dbxState.authing = true;
+  $('#dbx-status').textContent = 'Connecting\u2026';
+  try {
+    const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+    const authUrl = 'https://www.dropbox.com/oauth2/authorize?response_type=code&client_id=' + DBX_APP_KEY
+      + '&redirect_uri=' + encodeURIComponent(DBX_REDIRECT)
+      + '&code_challenge=' + challenge + '&code_challenge_method=S256&token_access_type=offline';
+    const redirect = await new Promise((resolve, reject) => {
+      chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (respUrl) => {
+        const err = chrome.runtime.lastError;
+        if (err || !respUrl) reject(new Error((err && err.message) || 'auth cancelled'));
+        else resolve(respUrl);
+      });
+    });
+    const u = new URL(redirect);
+    const code = u.searchParams.get('code') || new URLSearchParams(u.hash.slice(1)).get('code');
+    if (!code) throw new Error('no code in redirect');
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: DBX_APP_KEY, redirect_uri: DBX_REDIRECT }),
+    });
+    if (!res.ok) throw new Error('token exchange failed: ' + res.status);
+    const t = await res.json();
+    await dbxSaveTokens(t.access_token, t.refresh_token, t.expires_in);
+    dbxUpdateUi();
+    $('#dbx-status').textContent = '\u2713 Connected to Dropbox';
+    dbxPush();
+  } catch (e) {
+    $('#dbx-status').textContent = '\u2717 ' + e.message;
+  } finally {
+    dbxState.authing = false;
   }
-  return res;
+}
+
+async function dbxRefreshAccessToken() {
+  const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: dbxState.refreshToken, client_id: DBX_APP_KEY }),
+  });
+  if (!res.ok) throw new Error('token refresh failed: ' + res.status);
+  const t = await res.json();
+  await dbxSaveTokens(t.access_token, null, t.expires_in);
+  return dbxState.accessToken;
+}
+
+async function dbxValidToken() {
+  if (!dbxState.accessToken) return null;
+  if (Date.now() > dbxState.expiresAt - 60000) {
+    if (!dbxState.refreshToken) return null;
+    try { return await dbxRefreshAccessToken(); } catch { return null; }
+  }
+  return dbxState.accessToken;
 }
 
 async function dbxPush(silent = false) {
-  if (!dbxState.token || dbxState.busy) return;
+  if (dbxState.busy) return;
+  const token = await dbxValidToken();
+  if (!token) { if (!silent) $('#dbx-status').textContent = '\u2717 Not connected'; return; }
   dbxState.busy = true;
   try {
     const payload = JSON.stringify({ groups: state.groups, savedAt: new Date().toISOString() }, null, 2);
     const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + dbxState.token,
+        'Authorization': 'Bearer ' + token,
         'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH, mode: 'overwrite', mute: true }),
       },
       body: payload,
@@ -607,9 +670,9 @@ async function dbxPush(silent = false) {
       throw new Error('Dropbox: ' + msg);
     }
     dbxState.lastPush = Date.now();
-    if (!silent) $('#dbx-status').textContent = '✓ Saved to Dropbox (' + new Date().toLocaleTimeString() + ')';
+    if (!silent) $('#dbx-status').textContent = '\u2713 Saved to Dropbox (' + new Date().toLocaleTimeString() + ')';
   } catch (e) {
-    if (!silent) $('#dbx-status').textContent = '✗ ' + e.message;
+    if (!silent) $('#dbx-status').textContent = '\u2717 ' + e.message;
     else console.warn(e);
   } finally {
     dbxState.busy = false;
@@ -617,12 +680,13 @@ async function dbxPush(silent = false) {
 }
 
 async function dbxRestore() {
-  if (!dbxState.token) { alert('Enter a token first.'); return; }
-  $('#dbx-status').textContent = 'Loading…';
+  const token = await dbxValidToken();
+  if (!token) { $('#dbx-status').textContent = '\u2717 Not connected'; return; }
+  $('#dbx-status').textContent = 'Loading\u2026';
   try {
     const res = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + dbxState.token, 'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH }) },
+      headers: { 'Authorization': 'Bearer ' + token, 'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH }) },
     });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
@@ -633,30 +697,40 @@ async function dbxRestore() {
     state.groups = sanitizeGroups(data.groups);
     await save();
     render();
-    $('#dbx-status').textContent = '✓ Loaded from Dropbox (' + data.savedAt + ')';
+    $('#dbx-status').textContent = '\u2713 Loaded from Dropbox (' + data.savedAt + ')';
   } catch (e) {
-    $('#dbx-status').textContent = '✗ ' + e.message;
+    $('#dbx-status').textContent = '\u2717 ' + e.message;
   }
 }
 
 function dbxMaybeAutoBackup() {
-  if (!dbxState.auto || !dbxState.token) return;
+  if (!dbxState.auto || !dbxState.accessToken) return;
   if (Date.now() - dbxState.lastPush < 5 * 60 * 1000) return;
   dbxPush(true);
 }
 
+function dbxUpdateUi() {
+  const connected = !!dbxState.accessToken;
+  $('#btn-dbx-connect').style.display = connected ? 'none' : '';
+  $('#btn-dbx-disconnect').style.display = connected ? '' : 'none';
+  $('#dbx-conn-state').textContent = connected ? 'Connected' : 'Not connected';
+}
+
 function openBackupDialog() {
   const dlg = $('#dlg-backup');
-  $('#f-dbx-token').value = dbxState.token;
   $('#f-dbx-auto').checked = dbxState.auto;
   $('#dbx-status').textContent = '';
+  dbxUpdateUi();
   dlg.showModal();
   $('#dlg-backup-cancel').onclick = () => dlg.close();
   $('#dlg-backup-ok').onclick = async () => {
-    await dbxSaveSettings($('#f-dbx-token').value.trim(), $('#f-dbx-auto').checked);
+    dbxState.auto = $('#f-dbx-auto').checked;
+    await chrome.storage.local.set({ dbxAuto: dbxState.auto });
     dlg.close();
-    if (dbxState.token) dbxPush(); // immediate test-push
+    if (dbxState.accessToken) dbxPush();
   };
+  $('#btn-dbx-connect').onclick = () => dbxAuthorize();
+  $('#btn-dbx-disconnect').onclick = () => dbxDisconnect();
   $('#btn-dbx-restore').onclick = () => dbxRestore();
 }
 

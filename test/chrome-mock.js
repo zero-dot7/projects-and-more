@@ -2,6 +2,8 @@
 (function () {
   const store = {};
   window.__store = store;
+  // pkt 54: testowy app key dla OAuth flow (produkcyjnie pusty = disabled)
+  window.__TEST_DBX_APP_KEY = 'testappkey';
   Object.defineProperty(window, 'chrome', {
     value: {
       runtime: { id: 'testextensionid' },
@@ -15,6 +17,14 @@
             return out;
           },
           async set(obj) { Object.assign(store, obj); },
+        },
+      },
+      identity: { // pkt 54 mock: launchWebAuthFlow zwraca redirect z code
+        launchWebAuthFlow(o, cb) {
+          window.__authFlows = window.__authFlows || [];
+          window.__authFlows.push({ url: o.url, interactive: o.interactive });
+          const ru = decodeURIComponent(o.url.split('redirect_uri=')[1].split('&')[0]);
+          cb(ru + '?code=testcode123');
         },
       },
       windows: { // pkt 26 mock
@@ -50,6 +60,10 @@
   const realFetch = window.fetch.bind(window);
   window.__dbxCalls = [];
   window.fetch = async (url, opts = {}) => {
+    if (String(url).endsWith('/oauth2/token')) {
+      window.__dbxCalls.push({ url: String(url), body: opts.body });
+      return new Response(JSON.stringify({ access_token: 'sl.testAccess', refresh_token: 'sl.testRefresh', expires_in: 14400 }), { status: 200 });
+    }
     if (String(url).includes('dropboxapi.com')) {
       window.__dbxCalls.push({ url: String(url), headers: opts.headers || {}, body: opts.body });
       if (String(url).endsWith('/files/upload')) {

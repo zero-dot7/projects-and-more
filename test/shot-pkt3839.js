@@ -39,9 +39,15 @@ async function main() {
   await cdp(ws,idc++,'Runtime.evaluate',{expression:`if (state.view.mode !== 'tabs') { state.view.mode = 'tabs'; if(!state.view.activeId && state.groups.length) state.view.activeId = state.groups[0].id; render(); } if (state.theme !== 'day') { state.theme = 'day'; applyTheme(); }`, returnByValue:true});
   await new Promise(r=>setTimeout(r,400));
   // pkt 44-46: otwórz menu ustawień, aby screenshot pokazał kolejność przycisków
+  // pkt 53/54: settings -> Backup (nowa ikona SVG refresh + dialog OAuth)
   await cdp(ws,idc++,'Runtime.evaluate',{expression:`document.querySelector('#btn-settings').click()`, returnByValue:true});
   await new Promise(r=>setTimeout(r,300));
   let r = await cdp(ws,idc++,'Page.captureScreenshot',{format:'png'});
+  fs.writeFileSync('/tmp/sd5-menu.png', Buffer.from(r.data,'base64'));
+  console.log('menu saved');
+  await cdp(ws,idc++,'Runtime.evaluate',{expression:`document.querySelector('[data-act=\\\'backup\\\']').click()`, returnByValue:true});
+  await new Promise(rq=>setTimeout(rq,300));
+  r = await cdp(ws,idc++,'Page.captureScreenshot',{format:'png'});
   fs.writeFileSync('/tmp/sd5-day.png', Buffer.from(r.data,'base64'));
   console.log('day saved');
   // night

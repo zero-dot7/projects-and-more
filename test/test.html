@@ -32,15 +32,15 @@
     <label>URL<br><input name="url" id="f-url" type="url" placeholder="https://…" required></label>
     <label id="dlg-group-row">Grupa<br><select name="group" id="f-group"></select></label>
     <div class="dlg-actions">
-      <button type="button" id="dlg-cancel">Anuluj</button>
-      <button type="submit" class="primary" id="dlg-ok">Zapisz</button>
+      <button type="button" id="dlg-cancel">Cancel</button>
+      <button type="submit" class="primary" id="dlg-ok">Save</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="dlg-group">
   <form id="dlg-group-form" method="dialog">
-    <h3 id="dlg-group-title">Nowa grupa</h3>
+    <h3 id="dlg-group-title">New group</h3>
     <label>Nazwa<br><input name="name" id="f-group-name" required></label>
     <label>Kolor
       <div class="colors" id="color-picker">
@@ -68,8 +68,8 @@
       </div>
     </label>
     <div class="dlg-actions">
-      <button type="button" id="dlg-group-cancel">Anuluj</button>
-      <button type="submit" class="primary" id="dlg-group-ok">Zapisz</button>
+      <button type="button" id="dlg-group-cancel">Cancel</button>
+      <button type="submit" class="primary" id="dlg-group-ok">Save</button>
     </div>
   </form>
 </dialog>
@@ -77,12 +77,12 @@
 <dialog id="dlg-layout">
   <form method="dialog">
     <h3>▦ Tile layout</h3>
-    <label>Liczba kolumn<br><input type="number" id="f-cols" min="1" max="12" step="1" value="6"></label>
+    <label>Columns<br><input type="number" id="f-cols" min="1" max="12" step="1" value="6"></label>
     <label><span>Rows</span><br><input type="number" id="f-rows" min="1" max="12" step="1" value="4"></label>
     <label class="chk"><input type="checkbox" id="f-paginate" checked> <span>Paginate when tiles > cols × rows</span></label>
     <div class="dlg-actions">
-      <button type="button" id="dlg-layout-cancel">Anuluj</button>
-      <button type="button" class="primary" id="dlg-layout-ok">Zapisz</button>
+      <button type="button" id="dlg-layout-cancel">Cancel</button>
+      <button type="button" class="primary" id="dlg-layout-ok">Save</button>
     </div>
   </form>
 </dialog>
@@ -90,17 +90,19 @@
 <dialog id="dlg-backup">
   <form method="dialog">
     <h3>☁ Backup Dropbox</h3>
-    <p class="hint">Backup zapisuje grupy i kafelki do pliku <code>speed-dial-backup.json</code> w folderze aplikacji Dropbox.</p>
-    <label><span>Access token (Dropbox OAuth2)</span><br>
-      <input name="token" id="f-dbx-token" type="password" placeholder="sl.…" autocomplete="off">
-    </label>
+    <p class="hint">Backup saves groups and tiles to <code>speed-dial-backup.json</code> in the Dropbox app folder.</p>
+    <div class="dbx-conn">
+      <span id="dbx-conn-state">Not connected</span>
+      <button type="button" id="btn-dbx-connect" class="primary">Connect Dropbox</button>
+      <button type="button" id="btn-dbx-disconnect" style="display:none">Disconnect</button>
+    </div>
     <label class="chk"><input type="checkbox" id="f-dbx-auto" checked> <span>Auto-backup on every change (max 1/5 min)</span></label>
     <div id="dbx-status" class="hint"></div>
     <div class="dlg-actions">
-      <button type="button" id="btn-dbx-restore">Wczytaj z Dropbox</button>
+      <button type="button" id="btn-dbx-restore">Restore from Dropbox</button>
       <span class="spacer"></span>
-      <button type="button" id="dlg-backup-cancel">Anuluj</button>
-      <button type="button" class="primary" id="dlg-backup-ok">Zapisz ustawienia</button>
+      <button type="button" id="dlg-backup-cancel">Cancel</button>
+      <button type="button" class="primary" id="dlg-backup-ok">Save settings</button>
     </div>
   </form>
 </dialog>
@@ -113,7 +115,7 @@
       <span class="count"></span>
       <span class="spacer"></span>
       <button class="icon-btn add-tile" title="Add tile to group">+</button>
-      <button class="icon-btn thumb-group" title="Refresh group thumbnails (queued)">🖼</button>
+      <button class="icon-btn thumb-group" title="Refresh group thumbnails (queued)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
       <button class="icon-btn edit-group" title="Edit group">✎</button>
       <button class="icon-btn del-group" title="Delete group">🗑</button>
     </div>
