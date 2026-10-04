@@ -2,3 +2,8 @@ node_modules/
 *.zip
 *.png
 /test/dbg*
+test/diag-*
+test/shot-*
+test/debug.js
+test/netlog.js
+test/errcheck.js
