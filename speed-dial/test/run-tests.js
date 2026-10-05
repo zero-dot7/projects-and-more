@@ -460,6 +460,24 @@ async function main() {
     }, 300);
   }))()`));
 
+  // pkt 55: last sync info w dialogu Backup Dropbox
+  check('pkt55: #dbx-last-sync exists in dialog', await evalJs(`document.querySelector('#dbx-last-sync') !== null`));
+  check('pkt55: last sync shown after upload', await evalJs(`(() => {
+    const el = document.querySelector('#dbx-last-sync');
+    openBackupDialog();
+    return el && el.style.display !== 'none' && el.textContent.startsWith('Last sync: ');
+  })()`));
+
+  // pkt 56: kompaktowy odstęp zakładek ↔ kafelki
+  check('pkt56: tab-bar margin-bottom reduced', await evalJs(`(() => {
+    const tb = document.querySelector('.tab-bar');
+    return tb && parseFloat(getComputedStyle(tb).marginBottom) <= 4;
+  })()`));
+  check('pkt56: no-head group-head out of flow', await evalJs(`(() => {
+    const g = document.querySelector('.group.no-head');
+    return g && getComputedStyle(g.querySelector('.group-head')).position === 'absolute';
+  })()`));
+
 
   console.log(`\n${results.length - fails}/${results.length} passed`);
   ws.close(); chrome.kill();
