@@ -561,11 +561,12 @@ const DBX_REDIRECT = 'https://' + chrome.runtime.id + '.chromiumapp.org/';
 const dbxState = { accessToken: '', refreshToken: '', expiresAt: 0, auto: true, lastPush: 0, busy: false, authing: false };
 
 async function dbxLoadSettings() {
-  const s = await chrome.storage.local.get(['dbxAccess', 'dbxRefresh', 'dbxExpires', 'dbxAuto']);
+  const s = await chrome.storage.local.get(['dbxAccess', 'dbxRefresh', 'dbxExpires', 'dbxAuto', 'dbxLastPush']);
   dbxState.accessToken = s.dbxAccess || '';
   dbxState.refreshToken = s.dbxRefresh || '';
   dbxState.expiresAt = s.dbxExpires || 0;
   dbxState.auto = s.dbxAuto !== false;
+  dbxState.lastPush = s.dbxLastPush || 0;
 }
 
 async function dbxSaveTokens(access, refresh, expiresIn) {
@@ -576,8 +577,8 @@ async function dbxSaveTokens(access, refresh, expiresIn) {
 }
 
 async function dbxDisconnect() {
-  dbxState.accessToken = ''; dbxState.refreshToken = ''; dbxState.expiresAt = 0;
-  await chrome.storage.local.set({ dbxAccess: '', dbxRefresh: '', dbxExpires: 0 });
+  dbxState.accessToken = ''; dbxState.refreshToken = ''; dbxState.expiresAt = 0; dbxState.lastPush = 0;
+  await chrome.storage.local.set({ dbxAccess: '', dbxRefresh: '', dbxExpires: 0, dbxLastPush: 0 });
   dbxUpdateUi();
   $('#dbx-status').textContent = 'Disconnected';
 }
@@ -723,6 +724,8 @@ async function dbxPush(silent = false) {
       throw new Error('Dropbox: ' + await parseDropboxError(res)); // Fix 9
     }
     dbxState.lastPush = Date.now();
+    chrome.storage.local.set({ dbxLastPush: dbxState.lastPush });
+    dbxLastSyncUi();
     if (!silent) $('#dbx-status').textContent = '\u2713 Saved to Dropbox (' + new Date().toLocaleTimeString() + ')';
   } catch (e) {
     if (!silent) $('#dbx-status').textContent = '\u2717 ' + e.message;
@@ -780,6 +783,18 @@ function dbxUpdateUi() {
     const chg = $('#btn-dbx-changekey');
     if (chg) chg.style.display = hasKey ? '' : 'none';
   });
+  dbxLastSyncUi();
+}
+
+function dbxLastSyncUi() {
+  const el = $('#dbx-last-sync');
+  if (!el) return;
+  if (dbxState.lastPush) {
+    el.textContent = 'Last sync: ' + new Date(dbxState.lastPush).toLocaleString();
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function openBackupDialog() {
