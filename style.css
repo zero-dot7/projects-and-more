@@ -51,7 +51,14 @@ main { padding: 0 28px 90px; }
 
 .group { margin-bottom: 22px; }
 /* pkt 19: w trybie zakładek bez nagłówka grupy — tylko przyciski akcji z prawej */
-.group.no-head .group-head { margin-bottom: 4px; }
+/* pkt 56: w trybie zakładek akcje grupy nakładają się na pas .t-host (padding-top .tiles) zamiast zajmować osobny wiersz */
+.group.no-head { position: relative; }
+.group.no-head .group-head {
+  position: absolute;
+  top: 0; right: 2px;
+  margin-bottom: 0;
+  z-index: 2;
+}
 .group.no-head .group-head .chev,
 .group.no-head .group-head h2,
 .group.no-head .group-head .count,
@@ -270,6 +277,9 @@ dialog input:focus, dialog select:focus { outline: none; border-color: var(--acc
 .tile.dragging { opacity: .4; }
 
 .hint { color: var(--muted); font-size: 12.5px; margin: 6px 0; word-break: break-word; }
+.dbx-conn { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.dbx-conn #dbx-conn-state { font-size: 13px; color: var(--muted); }
+.dbx-last-sync { font-size: 12.5px; color: var(--muted); }
 label.chk { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
 label.chk input { width: auto; margin: 0; }
 .dlg-actions .spacer { flex: 1; }
@@ -346,7 +356,7 @@ code { background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
   flex-wrap: nowrap; /* pkt 31: zawsze jedna linia (było wrap → różnie wg IMG11/IMG12) */
   gap: 6px;
   padding: 0;
-  margin-bottom: 12px;
+  margin-bottom: 4px; /* pkt 56: mniejszy odstęp zakładek↔kafelki (było 12px) */
   overflow-x: auto;
   scrollbar-width: thin;
 }

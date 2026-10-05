@@ -1,57 +1,57 @@
-# Dropbox Backup — konfiguracja (jednorazowa, ~2 min)
+# Dropbox Backup — setup (one-time, ~2 min)
 
-Rozszerzenie używa oficjalnego OAuth 2.0 + PKCE. Wymaga jednorazowej rejestracji
-własnej (darmowej) aplikacji Dropbox i wklejenia jej **app key** w dialogu backupu.
-App key to wartość publiczna — przy PKCE nie stanowi sekretu i nie musi być ukrywana.
+The extension uses official OAuth 2.0 + PKCE. It requires a one-time registration
+of your own (free) Dropbox app and pasting its **app key** into the backup dialog.
+The app key is a public value — with PKCE it is not a secret and does not need to be hidden.
 
-## 1. Zarejestruj aplikację w Dropbox
+## 1. Register an app in Dropbox
 
-1. Wejdź na **https://www.dropbox.com/developers/apps** i zaloguj się na swoje konto.
-2. Kliknij **Create app**.
-3. Uzupełnij formularz:
+1. Go to **https://www.dropbox.com/developers/apps** and log in to your account.
+2. Click **Create app**.
+3. Fill in the form:
    - **Choose an API**: `Scoped access`
-   - **Choose the type of access**: `App folder` (bezpieczniejsze — rozszerzenie
-     widzi tylko swój folder `Apps/Speed Dial Sync`, nie cały Dropbox)
-   - **Name your app**: np. `Speed Dial Sync`
-4. Kliknij **Create app**.
+   - **Choose the type of access**: `App folder` (safer — the extension
+     only sees its own `Apps/Speed Dial Sync` folder, not your entire Dropbox)
+   - **Name your app**: e.g. `Speed Dial Sync`
+4. Click **Create app**.
 
-## 2. Ustaw uprawnienia (Permissions)
+## 2. Set permissions
 
-1. W panelu aplikacji otwórz zakładkę **Permissions**.
-2. Zaznacz scope'y:
+1. In the app panel open the **Permissions** tab.
+2. Check these scopes:
    - `files.content.read`
    - `files.content.write`
    - `files.metadata.read`
-3. Kliknij **Submit** (zmiany scope'ów wymagają zatwierdzenia).
+3. Click **Submit** (scope changes require approval).
 
-## 3. Skopiuj App key
+## 3. Copy the App key
 
-1. Otwórz zakładkę **Settings**.
-2. Znajdź pole **App key** (sekcja OAuth 2) i skopiuj wartość — to krótki ciąg
-   małych liter/cyfr (~15–26 znaków). **Nie myl z „App secret"** (64 znaki) —
-   wklejenie secretu daje błąd Dropboxa „Invalid client_id: Too long".
-3. W tej samej sekcji OAuth 2, w polu **Redirect URIs**, kliknij **Add** i wklej:
+1. Open the **Settings** tab.
+2. Find the **App key** field (OAuth 2 section) and copy the value — it's a short
+   string of lowercase letters/digits (~15–26 chars). **Do not confuse it with "App secret"**
+   (64 chars) — pasting the secret yields the Dropbox error "Invalid client_id: Too long".
+3. In the same OAuth 2 section, in the **Redirect URIs** field, click **Add** and paste:
    `https://ldgbieeolhlhaodogakabgdhjadcmedn.chromiumapp.org/`
-   (adres z ID zainstalowanego rozszerzenia; końcowy `/` jest wymagany).
-   Bez tego Dropbox zwraca „Invalid redirect_uri".
+   (the address contains your installed extension's ID; the trailing `/` is required).
+   Without it Dropbox returns "Invalid redirect_uri".
 
-## 4. Podłącz rozszerzenie
+## 4. Connect the extension
 
-1. Otwórz stronę nowej karty → menu ⚙ → **Backup Dropbox…**
-2. W polu **„Dropbox app key (one-time)"** wklej skopiowany key.
-3. Kliknij **Connect Dropbox** → otworzy się strona Dropboxa → zaloguj się
-   i zatwierdź dostęp (jednorazowo).
-4. Status zmieni się na **Connected** i od razu poleci pierwszy backup.
+1. Open the new-tab page → ⚙ menu → **Backup Dropbox…**
+2. In the **"Dropbox app key (one-time)"** field paste the copied key.
+3. Click **Connect Dropbox** — the Dropbox page opens → log in
+   and approve access (one-time).
+4. The status changes to **Connected** and the first backup runs immediately.
 
-Od tej pory token odświeża się automatycznie — niczego więcej nie wpisujesz.
-Key zapisuje się w `chrome.storage.sync` i pole znika. Jeśli key był błędny,
-pole wraca po nieudanej próbie połączenia (wpisz poprawny).
+From now on the token refreshes automatically — you never enter anything again.
+The key is saved in `chrome.storage.sync` and the field disappears. If the key was wrong,
+the field reappears after a failed connection attempt (enter the correct one).
 
-## Uwagi
+## Notes
 
-- Backup ląduje w `Apps/Speed Dial Sync/` na Twoim Dropboxie (plik JSON).
-- **Disconnect** w dialogu usuwa tokeny, ale zapamiętuje app key — ponowne
-  połączenie to jeden klik. Usunięcie key: wyczyść `dbxAppKey` w
+- The backup lands in `Apps/Speed Dial Sync/` in your Dropbox (a JSON file).
+- **Disconnect** in the dialog removes tokens but remembers the app key — reconnecting
+  is one click. To delete the key: clear `dbxAppKey` via
   `chrome://extensions` → service worker → console:
   `chrome.storage.sync.remove('dbxAppKey')`.
-- Nie commituj do repo żadnych tokenów — app key wystarcza i jest publiczny.
+- Never commit any tokens to the repo — the app key alone is enough and it's public.
