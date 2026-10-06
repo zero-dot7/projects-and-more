@@ -116,7 +116,7 @@ async function makeThumb(tile, groupId) {
     top: 0,
     width: 1280,
     height: 800,
-    focused: false,
+    focused: true, // Fix 1: focused window for reliable captureVisibleTab
   });
   const tab = win.tabs?.[0];
   if (!tab?.id) { await chrome.windows.remove(win.id); throw new Error('no tab'); }
@@ -360,8 +360,7 @@ function renderGroup(g) {
   const doPaginate = state.layout.paginate && g.tiles.length > perPage;
   tilesEl.style.setProperty('--cols', state.layout.cols);
   tilesEl.classList.toggle('no-paginate', !state.layout.paginate);
-  const page = clampInt(state.view.pages[g.id] ?? 0, 0, Math.max(0, Math.ceil(g.tiles.length / perPage) - 1), 0);
-  state.view.pages[g.id] = page;
+  const page = clampInt(state.view.pages[g.id] ?? 0, 0, Math.max(0, Math.ceil(g.tiles.length / perPage) - 1), 0); // Fix 4: No mutation
   const visible = doPaginate ? g.tiles.slice(page * perPage, (page + 1) * perPage) : g.tiles;
   for (const t of visible) tilesEl.appendChild(renderTile(t, g));
   if (doPaginate) tilesEl.appendChild(renderPageBar(g, page, Math.ceil(g.tiles.length / perPage)));
@@ -590,7 +589,7 @@ function b64url(bytes) {
 }
 
 async function dbxGetAppKey() {
-  const o = await chrome.storage.sync.get('dbxAppKey');
+  const o = await chrome.storage.local.get('dbxAppKey'); // Fix 8: Use local storage for security
   return (o && o.dbxAppKey) || DBX_APP_KEY_FALLBACK || '';
 }
 
@@ -605,14 +604,14 @@ async function dbxAuthorize() {
   let DBX_APP_KEY = await dbxGetAppKey();
   if (DBX_APP_KEY && !dbxValidAppKeyFmt(DBX_APP_KEY)) {
     // zły key zapisany wcześniej (np. app secret) — wyczyść i pozwól wpisać ponownie
-    await chrome.storage.sync.remove('dbxAppKey');
+    await chrome.storage.local.remove('dbxAppKey'); // Fix 8
     DBX_APP_KEY = '';
   }
   if (!DBX_APP_KEY) {
     const k = ($('#dbx-appkey') && $('#dbx-appkey').value.trim()) || '';
     if (!k) { $('#dbx-status').textContent = '\u2717 Enter your Dropbox app key first (dropbox.com/developers/apps)'; return; }
     if (!dbxValidAppKeyFmt(k)) { $('#dbx-status').textContent = '\u2717 That does not look like an app key \u2014 copy the short "App key" from Settings (not the 64-char App secret)'; return; }
-    await chrome.storage.sync.set({ dbxAppKey: k });
+    await chrome.storage.local.set({ dbxAppKey: k }); // Fix 8
     DBX_APP_KEY = k;
   }
   dbxState.authing = true;
@@ -643,7 +642,7 @@ async function dbxAuthorize() {
       body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: DBX_APP_KEY, redirect_uri: DBX_REDIRECT }),
     });
     if (!res.ok) {
-      if (res.status === 400) await chrome.storage.sync.remove('dbxAppKey'); // zły app key — pozwól wpisać ponownie
+      if (res.status === 400) await chrome.storage.local.remove('dbxAppKey'); // Fix 8
       const body = await res.text().catch(() => '');
       let detail = '';
       try { const j = JSON.parse(body); detail = j.error_description || j.error || ''; } catch { detail = body.slice(0, 140); }
@@ -659,6 +658,21 @@ async function dbxAuthorize() {
   } finally {
     dbxState.authing = false;
   }
+}
+
+// Fix 9: Helper to parse Dropbox errors consistently
+async function parseDropboxError(res) {
+  let msg = res.status + ' ' + res.statusText;
+  try {
+    const e = await res.json();
+    msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg;
+  } catch {
+    try {
+      const text = await res.text();
+      msg += ' — ' + text.slice(0, 120);
+    } catch {}
+  }
+  return msg;
 }
 
 async function dbxRefreshAccessToken() {
@@ -678,7 +692,13 @@ async function dbxValidToken() {
   if (!dbxState.accessToken) return null;
   if (Date.now() > dbxState.expiresAt - 60000) {
     if (!dbxState.refreshToken) return null;
-    try { return await dbxRefreshAccessToken(); } catch { return null; }
+    // Fix 3: Serialize refresh requests
+    if (!dbxState.refreshPromise) {
+      dbxState.refreshPromise = dbxRefreshAccessToken().finally(() => {
+        dbxState.refreshPromise = null;
+      });
+    }
+    try { return await dbxState.refreshPromise; } catch { return null; }
   }
   return dbxState.accessToken;
 }
@@ -700,9 +720,7 @@ async function dbxPush(silent = false) {
       body: payload,
     });
     if (!res.ok) {
-      let msg = res.status + ' ' + res.statusText;
-      try { const e = await res.json(); msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg; } catch { try { msg += ' — ' + (await res.text()).slice(0, 120); } catch {} }
-      throw new Error('Dropbox: ' + msg);
+      throw new Error('Dropbox: ' + await parseDropboxError(res)); // Fix 9
     }
     dbxState.lastPush = Date.now();
     if (!silent) $('#dbx-status').textContent = '\u2713 Saved to Dropbox (' + new Date().toLocaleTimeString() + ')';
@@ -724,9 +742,7 @@ async function dbxRestore() {
       headers: { 'Authorization': 'Bearer ' + token, 'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH }) },
     });
     if (!res.ok) {
-      let msg = res.status + ' ' + res.statusText;
-      try { const e = await res.json(); msg = (e.error_summary || '') + (e.error && e.error['.tag'] ? ' (' + e.error['.tag'] + ')' : '') || msg; } catch { try { msg += ' — ' + (await res.text()).slice(0, 120); } catch {} }
-      throw new Error(msg);
+      throw new Error(await parseDropboxError(res)); // Fix 9
     }
     const data = await res.json();
     state.groups = sanitizeGroups(data.groups);
@@ -741,7 +757,11 @@ async function dbxRestore() {
 function dbxMaybeAutoBackup() {
   if (!dbxState.auto || !dbxState.accessToken) return;
   if (Date.now() - dbxState.lastPush < 5 * 60 * 1000) return;
-  dbxPush(true);
+  // Fix 5: Debounce auto-backup
+  clearTimeout(dbxMaybeAutoBackup._timer);
+  dbxMaybeAutoBackup._timer = setTimeout(() => {
+    dbxPush(true);
+  }, 3000);
 }
 
 function dbxUpdateUi() {
@@ -749,7 +769,7 @@ function dbxUpdateUi() {
   $('#btn-dbx-connect').style.display = connected ? 'none' : '';
   $('#btn-dbx-disconnect').style.display = connected ? '' : 'none';
   $('#dbx-conn-state').textContent = connected ? 'Connected' : 'Not connected';
-  chrome.storage.sync.get('dbxAppKey').then(o => {
+  chrome.storage.local.get('dbxAppKey').then(o => { // Fix 8
     const hasKey = !!(o && o.dbxAppKey);
     const inp = $('#dbx-appkey');
     if (inp) {
@@ -779,7 +799,7 @@ function openBackupDialog() {
   $('#btn-dbx-disconnect').onclick = () => dbxDisconnect();
   const chgKey = $('#btn-dbx-changekey');
   if (chgKey) chgKey.onclick = async () => {
-    await chrome.storage.sync.remove('dbxAppKey');
+    await chrome.storage.local.remove('dbxAppKey'); // Fix 8
     $('#dbx-status').textContent = 'Enter a new app key and connect';
     dbxUpdateUi();
     const inp = $('#dbx-appkey');
