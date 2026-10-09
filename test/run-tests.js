@@ -423,7 +423,6 @@ async function main() {
   })()`) === true);
 
   console.log(results.join('\n'));
-  const fails = results.filter(r => r.startsWith('FAIL')).length;
   // pkt 53: ikona refresh miniatur jako SVG zamiast emoji
   check('pkt53: thumb-group icon is inline SVG', await evalJs(`(() => {
     const b = document.querySelector('.thumb-group');
@@ -451,7 +450,7 @@ async function main() {
   }))()`));
 
   check('pkt54: refresh flow renews access token', await evalJs(`(() => new Promise(res => {
-    window.__store.dbxExpires = Date.now() - 1000; // wymuś wygaśnięcie
+    dbxState.expiresAt = Date.now() - 1000; // wymuś wygaśnięcie (runtime copy, nie store)
     document.querySelector('#btn-dbx-restore').click();
     setTimeout(() => {
       const calls = (window.__dbxCalls || []).filter(c => c.url.endsWith('/oauth2/token'));
@@ -468,7 +467,8 @@ async function main() {
     return el && el.style.display !== 'none' && el.textContent.startsWith('Last sync: ');
   })()`));
 
-  // pkt 56: kompaktowy odstęp zakładek ↔ kafelki
+  // pkt 56: kompaktowy odstęp zakładek ↔ kafelki (widoczny w trybie tabs)
+  await evalJs(`(() => { state.view.mode = 'tabs'; state.view.activeId = state.groups[0].id; render(); })()`); // setup brakujący w oryginale (activeId po testach zamykania kart)
   check('pkt56: tab-bar margin-bottom reduced', await evalJs(`(() => {
     const tb = document.querySelector('.tab-bar');
     return tb && parseFloat(getComputedStyle(tb).marginBottom) <= 4;
@@ -478,7 +478,26 @@ async function main() {
     return g && getComputedStyle(g.querySelector('.group-head')).position === 'absolute';
   })()`));
 
+  // pkt 1 (toto.md): Ctrl+Q quick-add — hash #quick-add otwiera "Add tile" z prefill z storage.session
+  await evalJs(`(() => { window.__session['quick-add'] = { pageUrl: 'https://example.com/ctrl-q', pageTitle: 'Ctrl Q Test Page' }; location.hash = 'quick-add'; })()`);
+  await new Promise(r => setTimeout(r, 300));
+  check('pkt1: hash opens Add tile dialog', await evalJs(`(() => { const d = document.querySelector('#dlg'); return d && d.open && document.querySelector('#dlg-title').textContent === 'Add tile'; })()`) === true);
+  check('pkt1: URL prefilled from session storage', await evalJs(`(() => { return document.querySelector('#f-url').value === 'https://example.com/ctrl-q'; })()`) === true);
+  check('pkt1: title prefilled from session storage', await evalJs(`(() => { return document.querySelector('#f-title').value === 'Ctrl Q Test Page'; })()`) === true);
+  check('pkt1: session payload consumed (removed)', await evalJs(`(() => { return !('quick-add' in window.__session); })()`) === true);
+  check('pkt1: hash stripped (F5 will not reopen dialog)', await evalJs(`(() => { return !location.hash; })()`) === true);
+  // zapis kafelka przez dialog quick-add
+  await evalJs(`(() => { document.querySelector('#dlg-ok').click(); })()`);
+  await new Promise(r => setTimeout(r, 300));
+  check('pkt1: tile saved via quick-add dialog', await evalJs(`(() => { const t = state.groups.flatMap(g => g.tiles).find(t => t.url === 'https://example.com/ctrl-q'); return !!t && t.title === 'Ctrl Q Test Page'; })()`) === true);
+  // drugie wywołanie skrótu bez danych (np. pusta karta) = pusty dialog
+  await evalJs(`(() => { delete window.__session['quick-add']; location.hash = 'quick-add'; })()`);
+  await new Promise(r => setTimeout(r, 300));
+  check('pkt1: no data → empty Add tile dialog', await evalJs(`(() => { const d = document.querySelector('#dlg'); return d && d.open && !document.querySelector('#f-url').value && !document.querySelector('#f-title').value; })()`) === true);
+  await evalJs(`(() => { document.querySelector('#dlg-cancel').click(); })()`);
 
+  const fails = results.filter(r => r.startsWith('FAIL')).length;
+  console.log('\n' + results.filter(r => r.startsWith('FAIL') || r.includes('pkt1')).join('\n'));
   console.log(`\n${results.length - fails}/${results.length} passed`);
   ws.close(); chrome.kill();
   process.exit(fails ? 1 : 0);
