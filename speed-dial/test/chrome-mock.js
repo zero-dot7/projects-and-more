@@ -2,6 +2,8 @@
 (function () {
   const store = {};
   window.__store = store;
+  const sessionStore = {}; // pkt 1 (Ctrl+Q): osobny obszar session
+  window.__session = sessionStore;
   // pkt 54: testowy app key dla OAuth flow (produkcyjnie pusty = disabled)
   window.__TEST_DBX_APP_KEY = 'testappkey';
   Object.defineProperty(window, 'chrome', {
@@ -28,6 +30,16 @@
           },
           async set(obj) { Object.assign(store, obj); },
           async remove(k) { delete store[k]; },
+        },
+        session: { // Ctrl+Q quick-add
+          async get(k) {
+            if (typeof k === 'string') return k in sessionStore ? { [k]: sessionStore[k] } : {};
+            const out = {};
+            for (const key of Object.keys(k)) if (key in sessionStore) out[key] = sessionStore[key];
+            return out;
+          },
+          async set(obj) { Object.assign(sessionStore, obj); },
+          async remove(k) { delete sessionStore[k]; },
         },
       },
       identity: { // pkt 54 mock: launchWebAuthFlow zwraca redirect z code
