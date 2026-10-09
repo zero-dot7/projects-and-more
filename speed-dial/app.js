@@ -481,11 +481,11 @@ function enableGroupDrop(tilesEl, g) {
 
 /* ---------- dialogs ---------- */
 
-function openTileDialog(tile, groupId) {
+function openTileDialog(tile, groupId, prefill) {
   const dlg = $('#dlg');
   $('#dlg-title').textContent = tile ? 'Edit tile' : 'Add tile';
-  $('#f-title').value = tile ? tile.title : '';
-  $('#f-url').value = tile ? tile.url : '';
+  $('#f-title').value = tile ? tile.title : (prefill && prefill.pageTitle) || '';
+  $('#f-url').value = tile ? tile.url : (prefill && prefill.pageUrl) || '';
   const sel = $('#f-group');
   sel.innerHTML = '';
   for (const g of state.groups) {
@@ -955,6 +955,23 @@ function toast(msg, ms = 4000) {
   toast._t = setTimeout(() => { t.hidden = true; }, ms);
 }
 
+/* ---------- quick-add (Ctrl+Q, todo pkt 1) ---------- */
+
+async function handleQuickAddHash() {
+  if (location.hash !== '#quick-add') return false;
+  history.replaceState(null, '', location.pathname + location.search); // usuń hash, by F5 nie otwierał dialogu
+  let pre = null;
+  try {
+    const s = await chrome.storage.session.get('quick-add');
+    if (s && s['quick-add']) {
+      pre = s['quick-add'];
+      await chrome.storage.session.remove('quick-add');
+    }
+  } catch { /* storage.session niedostępny (test env) — pusty dialog */ }
+  openTileDialog(null, null, pre && (pre.pageUrl || pre.pageTitle) ? pre : null);
+  return true;
+}
+
 /* ---------- init ---------- */
 
 async function init() {
@@ -962,6 +979,8 @@ async function init() {
   await dbxLoadSettings();
   applyViewMode();
   syncViewMenu();
+  await handleQuickAddHash(); // Ctrl+Q: otwórz "Add tile" z prefill po załadowaniu
+  window.addEventListener('hashchange', () => handleQuickAddHash()); // skrót gdy newtab już otwarty
 
   // settings menu (gear, bottom-left)
   $('#btn-new-group').onclick = () => openGroupDialog(null); // pkt 30: stały + w prawym górnym rogu
