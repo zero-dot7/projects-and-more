@@ -82,6 +82,7 @@
   // fetch mock: Dropbox endpoints
   const realFetch = window.fetch.bind(window);
   window.__dbxCalls = [];
+  window.__TEST_NO_AUTO_THUMB = true; // testy sterują auto-podglądem jawnie (sekcja auto-thumb)
   window.fetch = async (url, opts = {}) => {
     if (String(url).endsWith('/oauth2/token')) {
       window.__dbxCalls.push({ url: String(url), body: opts.body });
