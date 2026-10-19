@@ -505,6 +505,7 @@ function openTileDialog(tile, groupId, prefill) {
     const gid = sel.value;
     const g = state.groups.find(x => x.id === gid);
     if (!g || !title || !url) return;
+    let newTile = null;
     if (tile) {
       tile.title = title; tile.url = url;
       // move if group changed
@@ -514,9 +515,13 @@ function openTileDialog(tile, groupId, prefill) {
         g.tiles.push(tile);
       }
     } else {
-      g.tiles.push({ id: uid(), title, url });
+      newTile = { id: uid(), title, url };
+      g.tiles.push(newTile);
     }
     save(); render();
+    // todo: auto-podgląd po dodaniu — tylko nowy kafelek bez miniatury (nie cała grupa)
+    // __TEST_NO_AUTO_THUMB: test-harness only (patrz __TEST_DBX_APP_KEY wyżej)
+    if (newTile && !newTile.thumb && !window.__TEST_NO_AUTO_THUMB) enqueueThumbs([newTile], gid);
   };
   $('#dlg-ok').onclick = () => { dlg.returnValue = 'ok'; dlg.close(); };
 }
