@@ -496,6 +496,52 @@ async function main() {
   check('pkt1: no data → empty Add tile dialog', await evalJs(`(() => { const d = document.querySelector('#dlg'); return d && d.open && !document.querySelector('#f-url').value && !document.querySelector('#f-title').value; })()`) === true);
   await evalJs(`(() => { document.querySelector('#dlg-cancel').click(); })()`);
 
+  // todo (16/10): auto-podgląd nowego kafelka — enqueue tylko dla niego, nie całej grupy
+  await evalJs(`(async () => {
+    state.view.mode = 'all';
+    state.groups = [{
+      id: 'ga', name: 'AutoThumb', color: '', collapsed: false,
+      tiles: [{ id: 'old1', title: 'Old', url: 'https://old.example.com', thumb: 'data:image/jpeg;base64,EXISTING' }],
+    }];
+    save = async () => {};
+    render();
+    window.__TEST_NO_AUTO_THUMB = false; // włącz auto-podgląd dla tego scenariusza
+    window.__thumbWins = []; window.__captures = []; window.__thumbRemoved = [];
+    openTileDialog(null, 'ga');
+    document.querySelector('#f-title').value = 'Nowy kafelek';
+    document.querySelector('#f-url').value = 'https://new-tile.example.com';
+    document.querySelector('#dlg-ok').click();
+  })()`);
+  await new Promise(r => setTimeout(r, 300));
+  check('auto-thumb: new tile in state right after dialog', await evalJs(`(() => {
+    const t = state.groups[0].tiles.find(t => t.url === 'https://new-tile.example.com');
+    return !!t;
+  })()`) === true);
+  check('auto-thumb: queue holds exactly the new tile', await evalJs(`(() => {
+    const t = state.groups[0].tiles.find(t => t.url === 'https://new-tile.example.com');
+    return thumbQueue.length + thumbActive === 1;
+  })()`) === true);
+  await new Promise(r => setTimeout(r, 3000)); // makeThumb w mocku: load + 1.2 s render
+  check('auto-thumb: exactly one popup window opened', await evalJs(`(window.__thumbWins || []).length`) === 1);
+  check('auto-thumb: capture only for new tile', await evalJs(`(window.__captures || []).length`) === 1);
+  check('auto-thumb: new tile got thumbnail', await evalJs(`(() => {
+    const t = state.groups[0].tiles.find(t => t.url === 'https://new-tile.example.com');
+    return !!t && typeof t.thumb === 'string' && t.thumb.startsWith('data:image/jpeg');
+  })()`) === true);
+  check('auto-thumb: existing tile thumb untouched', await evalJs(`(() => state.groups[0].tiles[0].thumb === 'data:image/jpeg;base64,EXISTING')()`) === true);
+  check('auto-thumb: popup closed after capture', await evalJs(`(window.__thumbRemoved || []).length === 1`) === true);
+  // edycja istniejącego kafelka NIE odpala generatora
+  await evalJs(`(() => {
+    window.__TEST_NO_AUTO_THUMB = true;
+    window.__thumbWins = []; window.__captures = [];
+    const t = state.groups[0].tiles.find(t => t.url === 'https://new-tile.example.com');
+    openTileDialog(t, 'ga');
+    document.querySelector('#f-title').value = 'Nowy kafelek 2';
+    document.querySelector('#dlg-ok').click();
+  })()`);
+  await new Promise(r => setTimeout(r, 500));
+  check('auto-thumb: edit does not trigger generation', await evalJs(`(window.__thumbWins || []).length === 0 && (window.__captures || []).length === 0 && thumbQueue.length === 0`) === true);
+
   const fails = results.filter(r => r.startsWith('FAIL')).length;
   console.log('\n' + results.filter(r => r.startsWith('FAIL') || r.includes('pkt1')).join('\n'));
   console.log(`\n${results.length - fails}/${results.length} passed`);
