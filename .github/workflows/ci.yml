@@ -1,0 +1,42 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  js-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: node --check every .js
+        run: |
+          set -e
+          find . -name node_modules -prune -o -name '*.js' -print | while read -r f; do
+            node --check "$f" || { echo "SYNTAX FAIL: $f"; exit 1; }
+          done
+          echo "syntax OK"
+
+  speed-dial-tests:
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install chromium
+        run: |
+          apt-get update -qq && apt-get install -y -qq chromium > /dev/null
+          chromium --version
+      - name: Test deps
+        run: npm ci --prefix speed-dial/test
+      - name: Run functional tests (116)
+        working-directory: speed-dial
+        run: |
+          python3 -m http.server 8765 >/dev/null 2>&1 &
+          SERVER=$!
+          sleep 1
+          node test/run-tests.js
+          RC=$?
+          kill $SERVER 2>/dev/null || true
+          exit $RC
