@@ -1,0 +1,14 @@
+title = "projects-and-more gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Inline base64 images are not secrets"
+regexTarget = "match"
+regexes = [
+  '''data:image/[a-z]+;base64,''',
+]
+paths = [
+  '''test/backup-real\.group_speed_dial''',
+]
