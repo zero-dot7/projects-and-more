@@ -113,7 +113,19 @@ async function main() {
   check('dropbox: upload called', calls.includes('files/upload'));
   const upCall = await evalJs(`(window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0]`);
   const argHdr = await evalJs(`((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).headers?.['Dropbox-API-Arg'] || ''`);
-  check('dropbox: overwrite mode', argHdr.includes('overwrite'));
+  const argInfo = JSON.parse(argHdr || '{}');
+  check('dropbox: add mode (sd4 — nigdy overwrite)', argInfo.mode === 'add');
+  check('dropbox: datowana ścieżka /backups/ (sd1/sd4)', /^\/backups\/speed-dial_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/.test(argInfo.path || ''));
+  const rotInfo = await evalJs(`(() => {
+    const del = (window.__dbxCalls || []).filter(c => c.url.endsWith('/files/delete_v2')).map(c => JSON.parse(c.body).path);
+    return JSON.stringify({ n: del.length, all: del.every(p => /^\\/backups\\//.test(p)), freshKept: !del.some(p => p.includes('_')), any: del.join(',') });
+  })()`).catch(() => '{}');
+  // sd5: rotacja usuwa 2 stare (10 i 30 dni); świeży (1 min) zostaje
+  const rot = JSON.parse(rotInfo || '{}');
+  check('dropbox: rotacja usuwa backupy >7 dni (sd5)', rot.n === 2);
+  check('dropbox: rotacja oszczędza świeży backup (sd5)', rot.n === 2 && rot.all === true);
+  const dailyMark = await evalJs(`(window.__store.dbxLastDaily || 0) > 0`);
+  check('dropbox: znacznik kopii dziennej zapisany (sd2)', dailyMark === true);
   const bodyChecks = await evalJs(`(() => {
     const b = ((window.__dbxCalls || []).filter(c => c.url.includes('files/upload'))[0] || {}).body;
     return JSON.stringify({ isBytes: b instanceof Uint8Array, text: typeof b === 'string' ? b : new TextDecoder().decode(b) });
@@ -134,6 +146,11 @@ async function main() {
   check('dropbox restore: group from mock', restoredName === 'Z Dropboxa');
   const status = await evalJs(`document.querySelector('#dbx-status').textContent`);
   check('dropbox restore: status ok', status.includes('✓'));
+  const dlPath = await evalJs(`(() => {
+    const dl = (window.__dbxCalls || []).filter(c => c.url.endsWith('/files/download')).pop() || {};
+    return (dl.headers?.['Dropbox-API-Arg'] || '') + '';
+  })()`);
+  check('dropbox restore: pobiera najnowszy z /backups (sd4)', /^{"path":"\/backups\/speed-dial_\d{4}.*}$/.test(dlPath));
 
   // 8. clock removed in 0.2.1 — check header/toolbar are gone and gear toggle works
   const headerGone = await evalJs(`document.querySelector('header') === null`);
@@ -419,7 +436,7 @@ async function main() {
     document.createElement = (t) => t === 'a' ? a : orig(t);
     try { exportJson(); } catch (e) { name = 'ERR:' + e.message; }
     document.createElement = orig; URL.createObjectURL = origCreate; URL.revokeObjectURL = origRevoke;
-    return /^speed-dial-backup_\\d{2}-\\d{2}-\\d{2}_\\d{2}-\\d{2}\\.json$/.test(name);
+    return /^speed-dial-backup_\\d{2}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.json$/.test(name); // sd1: +sekundy
   })()`) === true);
 
   console.log(results.join('\n'));

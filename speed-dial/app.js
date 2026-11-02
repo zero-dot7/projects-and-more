@@ -560,18 +560,27 @@ function openGroupDialog(group) {
 
 /* ---------- Dropbox backup (pkt 54: OAuth 2.0 + PKCE, bez ręcznych tokenów) ---------- */
 
-const DBX_PATH = '/speed-dial-backup.json';
+const DBX_DIR = '/backups'; // katalog z datowanymi backupami (0.4.0)
+const DBX_PATH = '/speed-dial-backup.json'; // legacy (<=0.3.17): fallback restore, gdy brak /backups
+const dbxState = { accessToken: '', refreshToken: '', expiresAt: 0, auto: true, lastPush: 0, lastDaily: 0, lastRotate: 0, busy: false, authing: false };
+
+// sd1/sd4: każda kopia to NOWY plik z datą i godziną (pełny rok, sortowalne nazwy)
+function dbxBackupPath(d = new Date()) {
+  const p = n => String(n).padStart(2, '0');
+  return `${DBX_DIR}/speed-dial_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.json`;
+}
 const DBX_APP_KEY_FALLBACK = window.__TEST_DBX_APP_KEY || ''; // test-harness only; normalnie app key wpisuje user w dialogu (storage, klucz dbxAppKey)
 const DBX_REDIRECT = 'https://' + chrome.runtime.id + '.chromiumapp.org/';
-const dbxState = { accessToken: '', refreshToken: '', expiresAt: 0, auto: true, lastPush: 0, busy: false, authing: false };
 
 async function dbxLoadSettings() {
-  const s = await chrome.storage.local.get(['dbxAccess', 'dbxRefresh', 'dbxExpires', 'dbxAuto', 'dbxLastPush']);
+  const s = await chrome.storage.local.get(['dbxAccess', 'dbxRefresh', 'dbxExpires', 'dbxAuto', 'dbxLastPush', 'dbxLastDaily', 'dbxLastRotate']);
   dbxState.accessToken = s.dbxAccess || '';
   dbxState.refreshToken = s.dbxRefresh || '';
   dbxState.expiresAt = s.dbxExpires || 0;
   dbxState.auto = s.dbxAuto !== false;
   dbxState.lastPush = s.dbxLastPush || 0;
+  dbxState.lastDaily = s.dbxLastDaily || 0;
+  dbxState.lastRotate = s.dbxLastRotate || 0;
 }
 
 async function dbxSaveTokens(access, refresh, expiresIn) {
@@ -582,8 +591,8 @@ async function dbxSaveTokens(access, refresh, expiresIn) {
 }
 
 async function dbxDisconnect() {
-  dbxState.accessToken = ''; dbxState.refreshToken = ''; dbxState.expiresAt = 0; dbxState.lastPush = 0;
-  await chrome.storage.local.set({ dbxAccess: '', dbxRefresh: '', dbxExpires: 0, dbxLastPush: 0 });
+  dbxState.accessToken = ''; dbxState.refreshToken = ''; dbxState.expiresAt = 0; dbxState.lastPush = 0; dbxState.lastDaily = 0; dbxState.lastRotate = 0;
+  await chrome.storage.local.set({ dbxAccess: '', dbxRefresh: '', dbxExpires: 0, dbxLastPush: 0, dbxLastDaily: 0, dbxLastRotate: 0 });
   dbxUpdateUi();
   $('#dbx-status').textContent = 'Disconnected';
 }
@@ -711,17 +720,18 @@ async function dbxValidToken() {
 
 async function dbxPush(silent = false) {
   if (dbxState.busy) return;
+  dbxState.busy = true; // review#5: ustawiamy PRZED await, żeby dwa równoległe wywołania nie przeszły oba
+  try {
   const token = await dbxValidToken();
   if (!token) { if (!silent) $('#dbx-status').textContent = '\u2717 Not connected'; return; }
-  dbxState.busy = true;
-  try {
     const payload = new TextEncoder().encode(JSON.stringify({ groups: state.groups, savedAt: new Date().toISOString() }, null, 2));
+    // sd4: każdy backup to nowy datowany plik (mode add — nigdy nie nadpisujemy)
     const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/octet-stream',
-        'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH, mode: 'overwrite', mute: true }),
+        'Dropbox-API-Arg': JSON.stringify({ path: dbxBackupPath(), mode: 'add', mute: true }),
       },
       body: payload,
     });
@@ -729,8 +739,10 @@ async function dbxPush(silent = false) {
       throw new Error('Dropbox: ' + await parseDropboxError(res)); // Fix 9
     }
     dbxState.lastPush = Date.now();
-    chrome.storage.local.set({ dbxLastPush: dbxState.lastPush });
+    dbxState.lastDaily = dbxState.lastPush; // sd2: każdy udany push spełnia wymóg kopii na dziś
+    chrome.storage.local.set({ dbxLastPush: dbxState.lastPush, dbxLastDaily: dbxState.lastDaily });
     dbxLastSyncUi();
+    dbxRotateBackups(token).catch(e => console.warn('dbx rotate:', e)); // sd5: rotacja, ale nie blokuje pusha
     if (!silent) $('#dbx-status').textContent = '\u2713 Saved to Dropbox (' + new Date().toLocaleTimeString() + ')';
   } catch (e) {
     if (!silent) $('#dbx-status').textContent = '\u2717 ' + e.message;
@@ -740,14 +752,82 @@ async function dbxPush(silent = false) {
   }
 }
 
+// Lista datowanych backupów w DBX_DIR (najnowszy pierwszy — nazwy ISO są sortowalne)
+async function dbxListBackups(token) {
+  let entries = [];
+  let res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: DBX_DIR, limit: 100 }),
+  });
+  if (!res.ok) throw new Error('Dropbox list: ' + await parseDropboxError(res));
+  let data = await res.json();
+  entries = entries.concat(data.entries || []);
+  while (data.has_more) {
+    res = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cursor: data.cursor }),
+    });
+    if (!res.ok) throw new Error('Dropbox list/continue: ' + await parseDropboxError(res));
+    data = await res.json();
+    entries = entries.concat(data.entries || []);
+  }
+  return entries
+    .filter(e => e['.tag'] === 'file' && /^speed-dial_.*\.json$/.test(e.name || ''))
+    .sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+}
+
+// Czas utworzenia backupu: z nazwy pliku (lokalny zegar w momencie uploadu), fallback server_modified
+function dbxEntryTime(e) {
+  const m = /^speed-dial_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.json$/.exec(e.name || '');
+  if (m) return Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`);
+  return Date.parse(e.server_modified || '') || 0;
+}
+
+// sd5: rotacja — usuwa backupy starsze niż 7 dni; rate-limit 6 h, żeby nie spamować API przy każdym pushu
+async function dbxRotateBackups(token) {
+  if (Date.now() - dbxState.lastRotate < 6 * 3600 * 1000) return;
+  dbxState.lastRotate = Date.now();
+  chrome.storage.local.set({ dbxLastRotate: dbxState.lastRotate });
+  const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+  const backups = await dbxListBackups(token);
+  for (const e of backups) {
+    const t = dbxEntryTime(e);
+    if (t > 0 && t < cutoff) { // review#1: nieznany czas (t=0) = nie usuwamy
+      const res = await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: e.path_display }),
+      });
+      if (!res.ok) throw new Error('Dropbox delete: ' + await parseDropboxError(res));
+    }
+  }
+}
+
+// sd2: automatyczna kopia raz dziennie — po starcie przeglądarki i przy każdej zmianie;
+// sd3: istniejący backup-po-zmianie (debounce w dbxMaybeAutoBackup) pozostaje bez zmian
+function dbxDailyTick() {
+  if (!dbxState.auto || !dbxState.accessToken) return;
+  if (Date.now() - dbxState.lastDaily < 24 * 3600 * 1000) return;
+  dbxPush(true);
+}
+
 async function dbxRestore() {
   const token = await dbxValidToken();
   if (!token) { $('#dbx-status').textContent = '\u2717 Not connected'; return; }
-  $('#dbx-status').textContent = 'Loading\u2026';
+  $('#dbx-status').textContent = 'Loading…';
   try {
+    // sd4: najnowszy z datowanych backupów; fallback na legacy plik (<=0.3.17)
+    let path = null;
+    try {
+      const list = await dbxListBackups(token);
+      if (list.length) path = list[0].path_display;
+    } catch (e) { console.warn('dbx list failed, trying legacy path:', e); }
+    if (!path) path = DBX_PATH;
     const res = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Dropbox-API-Arg': JSON.stringify({ path: DBX_PATH }) },
+      headers: { 'Authorization': 'Bearer ' + token, 'Dropbox-API-Arg': JSON.stringify({ path }) },
     });
     if (!res.ok) {
       throw new Error(await parseDropboxError(res)); // Fix 9
@@ -763,6 +843,7 @@ async function dbxRestore() {
 }
 
 function dbxMaybeAutoBackup() {
+  dbxDailyTick(); // sd2: okazja do dziennego backupu (przeglądarka otwarta >24 h)
   if (!dbxState.auto || !dbxState.accessToken) return;
   if (Date.now() - dbxState.lastPush < 5 * 60 * 1000) return;
   // Fix 5: Debounce auto-backup
@@ -837,7 +918,7 @@ function exportJson() {
   // pkt 47: nazwa pliku z datą YY-MM-DD i czasem HH-MM (dwukropek nielegalny w nazwach plików)
   const d = new Date();
   const pad = n => String(n).padStart(2, '0');
-  a.download = `speed-dial-backup_${pad(d.getFullYear() % 100)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}.json`;
+  a.download = `speed-dial-backup_${pad(d.getFullYear() % 100)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.json`; // sd1: data+czas+sekundy (unikalna nazwa)
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -982,6 +1063,7 @@ async function handleQuickAddHash() {
 async function init() {
   await load();
   await dbxLoadSettings();
+  dbxDailyTick(); // sd2: kopia raz dziennie po starcie przeglądarki
   applyViewMode();
   syncViewMenu();
   await handleQuickAddHash(); // Ctrl+Q: otwórz "Add tile" z prefill po załadowaniu

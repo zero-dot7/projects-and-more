@@ -90,6 +90,31 @@
     }
     if (String(url).includes('dropboxapi.com')) {
       window.__dbxCalls.push({ url: String(url), headers: opts.headers || {}, body: opts.body });
+      if (String(url).endsWith('/files/list_folder')) {
+        // sd4/sd5: dynamiczne daty — świeży backup (dziś), stary (10 dni) i bardzo stary (30 dni);
+        // rotacja 7 dni ma usunąć dwa ostatnie
+        const fmt = ms => {
+          const d = new Date(Date.now() - ms);
+          const p = n => String(n).padStart(2, '0');
+          return { name: `speed-dial_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.json`, iso: d.toISOString() };
+        };
+        const f = fmt(60 * 1000), o10 = fmt(10 * 86400 * 1000), o30 = fmt(30 * 86400 * 1000);
+        return new Response(JSON.stringify({
+          entries: [
+            { '.tag': 'file', name: f.name, path_display: '/backups/' + f.name, server_modified: f.iso },
+            { '.tag': 'file', name: o10.name, path_display: '/backups/' + o10.name, server_modified: o10.iso },
+            { '.tag': 'file', name: o30.name, path_display: '/backups/' + o30.name, server_modified: o30.iso },
+            { '.tag': 'folder', name: 'backups', path_display: '/backups' },
+          ],
+          has_more: false,
+        }), { status: 200 });
+      }
+      if (String(url).endsWith('/files/list_folder/continue')) {
+        return new Response(JSON.stringify({ entries: [], has_more: false }), { status: 200 });
+      }
+      if (String(url).endsWith('/files/delete_v2')) {
+        return new Response(JSON.stringify({ metadata: {} }), { status: 200 });
+      }
       if (String(url).endsWith('/files/upload')) {
         return new Response(JSON.stringify({ id: 'dbxid123' }), { status: 200 });
       }
